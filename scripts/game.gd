@@ -16,6 +16,8 @@ var critical_flash := 0.0
 var boss_transition_flash := 0.0
 var boss_hit_flash := 0.0
 var boss_shake := 0.0
+var combo_count := 0
+var combo_time := 0.0
 var combat_popups: Array[Dictionary] = []
 var upgrade_feedback_time := [0.0, 0.0, 0.0, 0.0]
 var energy_flash := 0.0
@@ -82,6 +84,13 @@ func _process(delta: float) -> void:
 		achievement_popup_time = 3.0
 	boss_hit_flash = maxf(0.0, boss_hit_flash - delta * 3.2)
 	boss_shake = move_toward(boss_shake, 0.0, delta * 4.8)
+	if combo_time > 0.0:
+		combo_time = maxf(0.0, combo_time - delta)
+		if combo_time <= 0.0:
+			combo_count = 0
+			if playing and ui_labels.has("combo"):
+				ui_labels["combo"].text = "СЕРИЯ УДАРОВ: —"
+				ui_labels["combo"].add_theme_color_override("font_color", Color("#8c777b"))
 	if boss_bar != null and is_instance_valid(boss_bar):
 		boss_bar.modulate = Color(1.0, 1.0 + boss_hit_flash * 0.24, 1.0 + boss_hit_flash * 0.10, 1.0)
 	for popup_index in range(combat_popups.size() - 1, -1, -1):
@@ -470,6 +479,8 @@ func _build_game_ui() -> void:
 	core_button.pressed.connect(_strike_core)
 	ui_labels["hit"] = _label("КОСНИСЬ, ЧТОБЫ УДАРИТЬ", Vector2(510, 420), Vector2(260, 25), 12, Color("#d58b4c"))
 	ui_labels["hit"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_labels["combo"] = _label("СЕРИЯ УДАРОВ: —", Vector2(510, 445), Vector2(260, 22), 11, Color("#8c777b"))
+	ui_labels["combo"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_panel(Vector2(945, 118), Vector2(305, 340))
 	_label("СТРАЖ ВРАТ МИРА", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
 	ui_labels["boss"] = _label(_boss_name(boss_stage), Vector2(968, 168), Vector2(250, 24), 13, Color("#f0d9c2"))
@@ -504,9 +515,10 @@ func _build_game_ui() -> void:
 		hp_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(hp_marker)
 	ui_labels["boss_hp"] = _label("500 / 500 ОЗ", Vector2(968, 232), Vector2(255, 22), 12, Color("#d8b9a8"))
-	ui_labels["boss_threat"] = _label("УГРОЗА: НИЗКАЯ", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
+	ui_labels["boss_phase"] = _label("ФАЗА I  •  100% ОСТАЛОСЬ", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
+	ui_labels["boss_threat"] = _label("УГРОЗА: НИЗКАЯ", Vector2(968, 273), Vector2(255, 18), 10, Color("#d5a77a"))
 	ui_labels["boss_threat"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	ui_labels["boss_hint"] = _label("Сокруши титана, чтобы получить\nосколок бога.", Vector2(968, 277), Vector2(255, 48), 13, Color("#aa8b87"))
+	ui_labels["boss_hint"] = _label("Сокруши титана, чтобы получить\nосколок бога.", Vector2(968, 296), Vector2(255, 43), 12, Color("#aa8b87"))
 	boost_button = _button("БОНУС x2  (ДЕМО)", Vector2(968, 365), Vector2(255, 52), true)
 	boost_button.add_theme_font_size_override("font_size", 13)
 	boost_button.pressed.connect(_activate_ad_demo)
@@ -843,6 +855,11 @@ func _close_journal() -> void:
 
 func _strike_core() -> void:
 	total_clicks += 1
+	combo_count += 1
+	combo_time = 1.5
+	if ui_labels.has("combo"):
+		ui_labels["combo"].text = "СЕРИЯ УДАРОВ  ×%d" % combo_count if combo_count > 1 else "ПЕРВЫЙ УДАР СЕРИИ"
+		ui_labels["combo"].add_theme_color_override("font_color", Color("#ffe6a0") if combo_count >= 10 else Color("#e5bd7e"))
 	_check_achievements()
 	hit_flash = 1.0
 	core_recoil = 1.0
@@ -958,6 +975,13 @@ func _refresh_ui() -> void:
 		ui_labels["boss"].text = _boss_name(boss_stage) + "  •  %02d" % boss_stage
 		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " ОЗ"
 		var hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
+		var phase_label: Label = ui_labels["boss_phase"]
+		var phase_number := 1 if hp_ratio > 0.75 else (2 if hp_ratio > 0.5 else (3 if hp_ratio > 0.25 else 4))
+		var phase_start := 1.0 - float(phase_number) * 0.25
+		var phase_end := 1.0 - float(phase_number - 1) * 0.25
+		var phase_progress := clampf((hp_ratio - phase_start) / maxf(phase_end - phase_start, 0.001), 0.0, 1.0)
+		phase_label.text = "ФАЗА %s  •  %d%% ДО СМЕНЫ" % [_roman_phase(phase_number), int(round(phase_progress * 100.0))]
+		phase_label.add_theme_color_override("font_color", Color("#ff715c") if phase_number >= 4 else (Color("#e6a45d") if phase_number >= 3 else Color("#d5a77a")))
 		var threat_label: Label = ui_labels["boss_threat"]
 		if hp_ratio <= 0.2:
 			threat_label.text = "УГРОЗА: КРИТИЧЕСКАЯ"
@@ -1033,6 +1057,18 @@ func _refresh_ui() -> void:
 		card.add_theme_stylebox_override("hover", hover)
 		card.add_theme_stylebox_override("pressed", pressed)
 		card.add_theme_stylebox_override("disabled", disabled_style)
+
+func _roman_phase(phase_number: int) -> String:
+	match phase_number:
+		1:
+			return "I"
+		2:
+			return "II"
+		3:
+			return "III"
+		4:
+			return "IV"
+	return "I"
 
 func _upgrade_next_effect(index: int) -> String:
 	match index:
