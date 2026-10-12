@@ -36,6 +36,10 @@ var ui_labels: Dictionary = {}
 var boss_bar: ProgressBar
 var core_button: Button
 var boost_button: Button
+var journal_button: Button
+var journal_overlay: Control
+var total_clicks := 0
+var total_upgrades := 0
 
 func _ready() -> void:
 	rng.randomize()
@@ -386,6 +390,9 @@ func _build_game_ui() -> void:
 	ui_labels["rate"] = _label("0 / СЕК", Vector2(820, 55), Vector2(190, 22), 12, Color("#c08b65"))
 	ui_labels["stage"] = _label("МИР  01", Vector2(1050, 22), Vector2(190, 28), 17, Color("#f1dfc5"))
 	ui_labels["shards"] = _label("ОСКОЛКИ БОГА  0", Vector2(1050, 53), Vector2(190, 22), 11, Color("#a99ce2"))
+	journal_button = _button("ЛЕТОПИСЬ  0/9", Vector2(565, 22), Vector2(190, 42), false)
+	journal_button.add_theme_font_size_override("font_size", 13)
+	journal_button.pressed.connect(_open_journal)
 	_panel(Vector2(30, 118), Vector2(255, 340))
 	_label("СОСТОЯНИЕ КУЗНИ", Vector2(52, 136), Vector2(210, 26), 16, Color("#e7c9a5"))
 	ui_labels["power"] = _label("СИЛА УДАРА\n1", Vector2(52, 180), Vector2(210, 52), 18, Color("#f2b75d"))
@@ -514,7 +521,141 @@ func _build_upgrade_card(index: int, pos: Vector2) -> void:
 	ui_labels["upgrade_cost_%d" % index] = cost_label
 
 
+
+func _achievement_data() -> Array[Dictionary]:
+	var total_levels := 0
+	for level in upgrade_levels:
+		total_levels += int(level)
+	return [
+		{"name": "ПЕРВОЕ ПЛАМЯ", "desc": "Нанеси первый удар по ядру", "value": total_clicks, "target": 1},
+		{"name": "СОТНЯ УДАРОВ", "desc": "Нанеси 100 ударов по ядру", "value": total_clicks, "target": 100},
+		{"name": "ТЫСЯЧА УДАРОВ", "desc": "Нанеси 1 000 ударов по ядру", "value": total_clicks, "target": 1000},
+		{"name": "КУЗНЕЦ", "desc": "Купи 10 улучшений кузни", "value": total_upgrades, "target": 10},
+		{"name": "МАСТЕР КОВКИ", "desc": "Купи 50 улучшений кузни", "value": total_upgrades, "target": 50},
+		{"name": "ДВИГАТЕЛЬ ДУШ", "desc": "Прокачай двигатель душ до уровня 10", "value": int(upgrade_levels[1]), "target": 10},
+		{"name": "ПЕРВЫЙ СТРАЖ", "desc": "Победи первого стража мира", "value": maxi(boss_stage - 1, 0), "target": 1},
+		{"name": "РАЗРУШИТЕЛЬ МИРОВ", "desc": "Доберись до мира 10", "value": boss_stage, "target": 10},
+		{"name": "УБИЙЦА БОГОВ", "desc": "Доберись до мира 25", "value": boss_stage, "target": 25}
+	]
+
+
+func _unlocked_achievement_count() -> int:
+	var unlocked := 0
+	for achievement in _achievement_data():
+		if int(achievement["value"]) >= int(achievement["target"]):
+			unlocked += 1
+	return unlocked
+
+
+func _open_journal() -> void:
+	if journal_overlay != null and is_instance_valid(journal_overlay):
+		return
+	journal_overlay = Control.new()
+	journal_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	journal_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	journal_overlay.z_index = 100
+	add_child(journal_overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.015, 0.008, 0.02, 0.88)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	journal_overlay.add_child(dim)
+
+	var frame := Panel.new()
+	frame.position = Vector2(315, 54)
+	frame.size = Vector2(650, 612)
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color("#100b13")
+	frame_style.border_color = Color("#b87949")
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(14)
+	frame_style.shadow_color = Color(0, 0, 0, 0.7)
+	frame_style.shadow_size = 20
+	frame.add_theme_stylebox_override("panel", frame_style)
+	journal_overlay.add_child(frame)
+
+	var title := Label.new()
+	title.position = Vector2(342, 70)
+	title.size = Vector2(480, 40)
+	title.text = "ЛЕТОПИСЬ КУЗНИ"
+	title.add_theme_font_size_override("font_size", 25)
+	title.add_theme_color_override("font_color", Color("#f2d6ac"))
+	journal_overlay.add_child(title)
+
+	var summary := Label.new()
+	summary.position = Vector2(344, 108)
+	summary.size = Vector2(500, 28)
+	summary.text = "ОТКРЫТО: %d ИЗ 9  •  УДАРОВ: %s  •  УЛУЧШЕНИЙ: %s" % [_unlocked_achievement_count(), _format_number(total_clicks), _format_number(total_upgrades)]
+	summary.add_theme_font_size_override("font_size", 12)
+	summary.add_theme_color_override("font_color", Color("#c49b80"))
+	journal_overlay.add_child(summary)
+
+	var close := Button.new()
+	close.position = Vector2(880, 66)
+	close.size = Vector2(58, 42)
+	close.text = "✕"
+	close.focus_mode = Control.FOCUS_NONE
+	close.add_theme_font_size_override("font_size", 20)
+	close.add_theme_color_override("font_color", Color("#f2d6ac"))
+	var close_style := StyleBoxFlat.new()
+	close_style.bg_color = Color("#321b20")
+	close_style.border_color = Color("#9d5b42")
+	close_style.set_border_width_all(1)
+	close_style.set_corner_radius_all(8)
+	close.add_theme_stylebox_override("normal", close_style)
+	close.add_theme_stylebox_override("hover", close_style)
+	close.pressed.connect(_close_journal)
+	journal_overlay.add_child(close)
+
+	var achievements := _achievement_data()
+	for i in range(achievements.size()):
+		var achievement: Dictionary = achievements[i]
+		var unlocked := int(achievement["value"]) >= int(achievement["target"])
+		var row := Panel.new()
+		row.position = Vector2(337, 151 + i * 54)
+		row.size = Vector2(606, 47)
+		var row_style := StyleBoxFlat.new()
+		row_style.bg_color = Color("#21151b") if unlocked else Color("#151019")
+		row_style.border_color = Color("#d58b4c") if unlocked else Color("#49313a")
+		row_style.set_border_width_all(1)
+		row_style.set_corner_radius_all(7)
+		row.add_theme_stylebox_override("panel", row_style)
+		journal_overlay.add_child(row)
+
+		var name_label := Label.new()
+		name_label.position = Vector2(350, 153 + i * 54)
+		name_label.size = Vector2(360, 21)
+		name_label.text = ("✦  " if unlocked else "◇  ") + str(achievement["name"])
+		name_label.add_theme_font_size_override("font_size", 13)
+		name_label.add_theme_color_override("font_color", Color("#f2c27b") if unlocked else Color("#a58b91"))
+		journal_overlay.add_child(name_label)
+
+		var desc_label := Label.new()
+		desc_label.position = Vector2(351, 175 + i * 54)
+		desc_label.size = Vector2(430, 18)
+		desc_label.text = str(achievement["desc"])
+		desc_label.add_theme_font_size_override("font_size", 10)
+		desc_label.add_theme_color_override("font_color", Color("#bca29c"))
+		journal_overlay.add_child(desc_label)
+
+		var progress_label := Label.new()
+		progress_label.position = Vector2(785, 162 + i * 54)
+		progress_label.size = Vector2(143, 24)
+		progress_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		progress_label.text = "ОТКРЫТО" if unlocked else "%s / %s" % [_format_number(mini(int(achievement["value"]), int(achievement["target"]))), _format_number(int(achievement["target"]))]
+		progress_label.add_theme_font_size_override("font_size", 11)
+		progress_label.add_theme_color_override("font_color", Color("#f2c27b") if unlocked else Color("#927982"))
+		journal_overlay.add_child(progress_label)
+
+
+func _close_journal() -> void:
+	if journal_overlay != null and is_instance_valid(journal_overlay):
+		journal_overlay.queue_free()
+	journal_overlay = null
+
 func _strike_core() -> void:
+	total_clicks += 1
 	hit_flash = 1.0
 	core_recoil = 1.0
 	for i in range(22):
@@ -559,6 +700,7 @@ func _buy_upgrade(index: int) -> void:
 			ui_labels["power"].text = "НЕДОСТАТОЧНО ЭНЕРГИИ"
 		return
 	energy -= cost
+	total_upgrades += 1
 	upgrade_levels[index] += 1
 	upgrade_feedback_time[index] = 0.9
 	match index:
@@ -589,6 +731,8 @@ func _activate_ad_demo() -> void:
 func _refresh_ui() -> void:
 	if not playing:
 		return
+	if journal_button != null and is_instance_valid(journal_button):
+		journal_button.text = "ЛЕТОПИСЬ  %d/9" % _unlocked_achievement_count()
 	if ui_labels.has("energy"):
 		ui_labels["energy"].text = "ЭНЕРГИЯ  " + _format_number(energy)
 		ui_labels["rate"].text = _format_number(idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)) + " / СЕК"
@@ -768,6 +912,8 @@ func _clear_ui() -> void:
 	boss_bar = null
 	core_button = null
 	boost_button = null
+	journal_button = null
+	journal_overlay = null
 
 func _save_game() -> void:
 	var cfg := ConfigFile.new()
@@ -780,6 +926,8 @@ func _save_game() -> void:
 	cfg.set_value("progress", "boss_hp", boss_hp)
 	cfg.set_value("progress", "boss_max_hp", boss_max_hp)
 	cfg.set_value("progress", "upgrade_levels", upgrade_levels)
+	cfg.set_value("progress", "total_clicks", total_clicks)
+	cfg.set_value("progress", "total_upgrades", total_upgrades)
 	cfg.set_value("progress", "last_time", int(Time.get_unix_time_from_system()))
 	cfg.save(SAVE_PATH)
 
@@ -796,6 +944,8 @@ func _load_game() -> void:
 	boss_hp = float(cfg.get_value("progress", "boss_hp", 500.0))
 	boss_max_hp = float(cfg.get_value("progress", "boss_max_hp", 500.0))
 	upgrade_levels = cfg.get_value("progress", "upgrade_levels", [0, 0, 0, 0])
+	total_clicks = int(cfg.get_value("progress", "total_clicks", 0))
+	total_upgrades = int(cfg.get_value("progress", "total_upgrades", 0))
 	var last_time := int(cfg.get_value("progress", "last_time", int(Time.get_unix_time_from_system())))
 	var elapsed := clampf(float(Time.get_unix_time_from_system() - last_time), 0.0, 28800.0)
 	energy += idle_rate * multiplier * elapsed * 0.5
