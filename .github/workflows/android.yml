@@ -93,6 +93,17 @@ jobs:
             exit 1
           fi
 
+      - name: Install project Android build template
+        shell: bash
+        run: |
+          godot --headless --editor --path . --install-android-build-template
+          if [ ! -d android/build ]; then
+            echo "Android build template installation did not create android/build."
+            find . -maxdepth 3 -type f -path './android/*' -print
+            exit 1
+          fi
+          echo "Android build template installed."
+
       - name: Export Android ARM64 debug APK
         shell: bash
         run: |
