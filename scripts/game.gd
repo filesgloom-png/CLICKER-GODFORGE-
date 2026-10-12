@@ -44,6 +44,10 @@ var boss_victories := 0
 var last_boss_reward := 0.0
 var victory_banner_time := 0.0
 var victory_banner_text := ""
+var achievement_popup_time := 0.0
+var achievement_popup_text := ""
+var achievement_popup_queue: Array[String] = []
+var claimed_achievements: Array[String] = []
 
 func _ready() -> void:
 	rng.randomize()
@@ -63,6 +67,10 @@ func _process(delta: float) -> void:
 	critical_flash = maxf(0.0, critical_flash - delta * 2.2)
 	boss_transition_flash = maxf(0.0, boss_transition_flash - delta * 1.35)
 	victory_banner_time = maxf(0.0, victory_banner_time - delta)
+	achievement_popup_time = maxf(0.0, achievement_popup_time - delta)
+	if achievement_popup_time <= 0.0 and not achievement_popup_queue.is_empty():
+		achievement_popup_text = achievement_popup_queue.pop_front()
+		achievement_popup_time = 3.0
 	boss_hit_flash = maxf(0.0, boss_hit_flash - delta * 3.2)
 	boss_shake = move_toward(boss_shake, 0.0, delta * 4.8)
 	if boss_bar != null and is_instance_valid(boss_bar):
@@ -181,6 +189,12 @@ func _draw() -> void:
 			var crit_outer: Vector2 = center + Vector2(cos(crit_angle), sin(crit_angle)) * 205.0
 			draw_line(crit_inner, crit_outer, Color(1.0, 0.76, 0.31, crit_alpha * 0.85), 3.0, true)
 	# Realm transition blooms through the ruined sanctum when a boss falls.
+	if achievement_popup_time > 0.0:
+		var achievement_alpha: float = clampf(achievement_popup_time / 0.45, 0.0, 1.0)
+		var achievement_rect := Rect2(Vector2(400, 158), Vector2(480, 48))
+		draw_rect(achievement_rect, Color(0.055, 0.025, 0.035, 0.94 * achievement_alpha), true)
+		draw_rect(achievement_rect, Color(0.95, 0.68, 0.31, 0.92 * achievement_alpha), false, 2.0)
+		draw_string(ThemeDB.fallback_font, Vector2(0, 187), achievement_popup_text, HORIZONTAL_ALIGNMENT_CENTER, 1280, 15, Color(1.0, 0.84, 0.55, achievement_alpha))
 	if victory_banner_time > 0.0:
 		var banner_alpha: float = clampf(victory_banner_time / 1.4, 0.0, 1.0)
 		var banner_rect := Rect2(Vector2(365, 80), Vector2(550, 72))
@@ -559,6 +573,16 @@ func _unlocked_achievement_count() -> int:
 	return unlocked
 
 
+func _check_achievements() -> void:
+	for achievement in _achievement_data():
+		var achievement_name := str(achievement["name"])
+		if int(achievement["value"]) >= int(achievement["target"]) and not claimed_achievements.has(achievement_name):
+			claimed_achievements.append(achievement_name)
+			achievement_popup_queue.append("ДОСТИЖЕНИЕ ОТКРЫТО  •  " + achievement_name)
+	if journal_button != null and is_instance_valid(journal_button):
+		journal_button.text = "ЛЕТОПИСЬ  %d/9" % _unlocked_achievement_count()
+
+
 func _open_journal() -> void:
 	if journal_overlay != null and is_instance_valid(journal_overlay):
 		return
@@ -668,6 +692,7 @@ func _close_journal() -> void:
 
 func _strike_core() -> void:
 	total_clicks += 1
+	_check_achievements()
 	hit_flash = 1.0
 	core_recoil = 1.0
 	for i in range(22):
@@ -693,6 +718,7 @@ func _strike_core() -> void:
 	if boss_hp <= 0.0:
 		boss_victories += 1
 		boss_stage += 1
+		_check_achievements()
 		last_boss_reward = 250.0 * boss_stage
 		energy += last_boss_reward
 		victory_banner_time = 2.2
@@ -719,6 +745,7 @@ func _buy_upgrade(index: int) -> void:
 	energy -= cost
 	total_upgrades += 1
 	upgrade_levels[index] += 1
+	_check_achievements()
 	upgrade_feedback_time[index] = 0.9
 	match index:
 		0:
@@ -946,6 +973,7 @@ func _save_game() -> void:
 	cfg.set_value("progress", "total_clicks", total_clicks)
 	cfg.set_value("progress", "total_upgrades", total_upgrades)
 	cfg.set_value("progress", "boss_victories", boss_victories)
+	cfg.set_value("progress", "claimed_achievements", claimed_achievements)
 	cfg.set_value("progress", "last_time", int(Time.get_unix_time_from_system()))
 	cfg.save(SAVE_PATH)
 
@@ -965,6 +993,7 @@ func _load_game() -> void:
 	total_clicks = int(cfg.get_value("progress", "total_clicks", 0))
 	total_upgrades = int(cfg.get_value("progress", "total_upgrades", 0))
 	boss_victories = int(cfg.get_value("progress", "boss_victories", maxi(boss_stage - 1, 0)))
+	claimed_achievements = cfg.get_value("progress", "claimed_achievements", [])
 	var last_time := int(cfg.get_value("progress", "last_time", int(Time.get_unix_time_from_system())))
 	var elapsed := clampf(float(Time.get_unix_time_from_system() - last_time), 0.0, 28800.0)
 	energy += idle_rate * multiplier * elapsed * 0.5
