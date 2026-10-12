@@ -63,7 +63,12 @@ jobs:
           unzip -q "$RUNNER_TEMP/godot/templates.tpz" -d "$RUNNER_TEMP/godot/templates"
           cp -a "$RUNNER_TEMP/godot/templates/templates/." "$HOME/.local/share/godot/export_templates/4.5.1.stable/"
           godot --version
-          godot --version | grep -Eq '^4\.5\.1\.stable(\.official\..*)?
+          GODOT_VERSION_OUTPUT="$(godot --version | tr -d '\r')"
+          echo "Detected Godot version: $GODOT_VERSION_OUTPUT"
+          case "$GODOT_VERSION_OUTPUT" in
+            4.5.1.stable*) ;;
+            *) echo "Expected Godot 4.5.1 stable, got: $GODOT_VERSION_OUTPUT"; exit 1 ;;
+          esac
 
       - name: Configure Godot Android paths
         shell: bash
