@@ -195,44 +195,99 @@ func _draw_sanctum_architecture(size: Vector2) -> void:
 
 func _draw_boss_portrait(center: Vector2, stage: int) -> void:
 	var bob: float = sin(pulse * 1.35 + float(stage)) * 4.0
-	var c: Color = Color("#b64b37")
+	var c: Color
+	var eye_color := Color("#ff5938")
 	match posmod(stage - 1, 4):
 		0:
 			c = Color("#b64b37")
+			eye_color = Color("#ff5938")
 		1:
 			c = Color("#a6aebc")
+			eye_color = Color("#bceaff")
 		2:
 			c = Color("#9a6ad0")
+			eye_color = Color("#e7a8ff")
 		3:
 			c = Color("#d19b4d")
+			eye_color = Color("#ffe19a")
 	center.y += bob
-	draw_circle(center, 92.0 + sin(pulse * 1.8) * 4.0, Color(c.r, c.g, c.b, 0.075))
-	draw_arc(center, 83.0, pulse * 0.12, pulse * 0.12 + TAU * 0.72, 64, Color(c.r, c.g, c.b, 0.35), 2.0, true)
-	# Crown horns, shoulders and an armored torso form a readable monster silhouette.
-	var horns := PackedVector2Array([
-		center + Vector2(-38, -37), center + Vector2(-66, -79), center + Vector2(-61, -27),
-		center + Vector2(-29, -22), center + Vector2(29, -22), center + Vector2(61, -27),
-		center + Vector2(66, -79), center + Vector2(38, -37), center + Vector2(28, -54),
-		center + Vector2(-28, -54)
-	])
-	draw_colored_polygon(horns, Color(0.055, 0.035, 0.055, 0.96))
-	var shoulders := PackedVector2Array([
-		center + Vector2(-23, -9), center + Vector2(-76, 8), center + Vector2(-91, 28),
-		center + Vector2(-54, 44), center + Vector2(-34, 37), center + Vector2(34, 37),
-		center + Vector2(54, 44), center + Vector2(91, 28), center + Vector2(76, 8),
-		center + Vector2(23, -9)
-	])
-	draw_colored_polygon(shoulders, Color(0.09, 0.055, 0.075, 0.98))
-	draw_colored_polygon(PackedVector2Array([center + Vector2(-35, 28), center + Vector2(-27, 69), center + Vector2(0, 82), center + Vector2(27, 69), center + Vector2(35, 28)]), Color(0.045, 0.03, 0.05, 0.98))
-	draw_circle(center + Vector2(0, -24), 32.0, Color(0.055, 0.035, 0.055, 0.98))
-	draw_arc(center + Vector2(0, -24), 33.0, PI, TAU, 36, Color(c.r, c.g, c.b, 0.8), 2.0, true)
-	draw_circle(center + Vector2(-13, -25), 4.2 + sin(pulse * 3.0) * 1.2, Color(1.0, 0.24, 0.12, 0.95))
-	draw_circle(center + Vector2(13, -25), 4.2 + sin(pulse * 3.0 + 1.0) * 1.2, Color(1.0, 0.24, 0.12, 0.95))
-	draw_line(center + Vector2(-15, 5), center + Vector2(0, 25), Color(c.r, c.g, c.b, 0.8), 2.0, true)
-	draw_line(center + Vector2(15, 5), center + Vector2(0, 25), Color(c.r, c.g, c.b, 0.8), 2.0, true)
+	var aura: float = 0.08 + 0.025 * sin(pulse * 1.8)
+	# A layered, stage-tinted halo separates the gatekeeper from the cathedral.
+	draw_circle(center, 99.0 + sin(pulse * 1.8) * 4.0, Color(c.r, c.g, c.b, aura))
+	draw_arc(center, 88.0, pulse * 0.12, pulse * 0.12 + TAU * 0.72, 72, Color(c.r, c.g, c.b, 0.42), 2.0, true)
+	draw_arc(center, 76.0, -pulse * 0.17, -pulse * 0.17 + TAU * 0.58, 64, Color(0.92, 0.63, 0.35, 0.28), 1.3, true)
+	for i in range(8):
+		var a: float = TAU * float(i) / 8.0 - pulse * 0.12
+		var p: Vector2 = center + Vector2(cos(a), sin(a)) * 84.0
+		draw_colored_polygon(PackedVector2Array([p + Vector2(0, -5), p + Vector2(4, 0), p + Vector2(0, 5), p + Vector2(-4, 0)]), Color(c.r, c.g, c.b, 0.8))
+	# Back horns and crown silhouette.
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-31, -40), center + Vector2(-73, -91), center + Vector2(-62, -30),
+		center + Vector2(-42, -13), center + Vector2(42, -13), center + Vector2(62, -30),
+		center + Vector2(73, -91), center + Vector2(31, -40), center + Vector2(18, -58),
+		center + Vector2(-18, -58)
+	]), Color("#08070d"))
+	draw_line(center + Vector2(-68, -78), center + Vector2(-54, -35), Color(c.r, c.g, c.b, 0.78), 2.0, true)
+	draw_line(center + Vector2(68, -78), center + Vector2(54, -35), Color(c.r, c.g, c.b, 0.78), 2.0, true)
+	# Broad pauldrons, engraved plates and a tapered breastplate.
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-24, -12), center + Vector2(-74, 0), center + Vector2(-96, 25),
+		center + Vector2(-68, 43), center + Vector2(-40, 34), center + Vector2(-30, 48),
+		center + Vector2(30, 48), center + Vector2(40, 34), center + Vector2(68, 43),
+		center + Vector2(96, 25), center + Vector2(74, 0), center + Vector2(24, -12)
+	]), Color("#171019"))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-68, 8), center + Vector2(-88, 25), center + Vector2(-66, 36),
+		center + Vector2(-49, 27), center + Vector2(-55, 16)
+	]), Color(c.r * 0.55, c.g * 0.45, c.b * 0.48, 0.95))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(68, 8), center + Vector2(88, 25), center + Vector2(66, 36),
+		center + Vector2(49, 27), center + Vector2(55, 16)
+	]), Color(c.r * 0.55, c.g * 0.45, c.b * 0.48, 0.95))
+	draw_line(center + Vector2(-74, 14), center + Vector2(-60, 29), Color(c.r, c.g, c.b, 0.8), 2.0, true)
+	draw_line(center + Vector2(74, 14), center + Vector2(60, 29), Color(c.r, c.g, c.b, 0.8), 2.0, true)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-37, 22), center + Vector2(-27, 65), center + Vector2(0, 82),
+		center + Vector2(27, 65), center + Vector2(37, 22), center + Vector2(0, 7)
+	]), Color("#09070d"))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-25, 27), center + Vector2(0, 17), center + Vector2(25, 27),
+		center + Vector2(18, 54), center + Vector2(0, 67), center + Vector2(-18, 54)
+	]), Color(c.r * 0.44, c.g * 0.35, c.b * 0.42, 0.95))
+	draw_line(center + Vector2(0, 22), center + Vector2(0, 61), Color(1.0, 0.65, 0.32, 0.7), 1.5, true)
 	for i in range(3):
-		var rib_y: float = 39.0 + float(i) * 9.0
-		draw_line(center + Vector2(-22 + float(i) * 3.0, rib_y), center + Vector2(22 - float(i) * 3.0, rib_y), Color(c.r, c.g, c.b, 0.25), 1.5, true)
+		var rib_y: float = 38.0 + float(i) * 8.0
+		draw_line(center + Vector2(-19 + float(i) * 3.0, rib_y), center + Vector2(19 - float(i) * 3.0, rib_y), Color(c.r, c.g, c.b, 0.48), 1.5, true)
+	# Face, brow ridge and a narrow glowing visor make the portrait readable at phone scale.
+	draw_circle(center + Vector2(0, -25), 35.0, Color("#09070d"))
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-26, -43), center + Vector2(-17, -57), center + Vector2(0, -62),
+		center + Vector2(17, -57), center + Vector2(26, -43), center + Vector2(23, -13),
+		center + Vector2(0, 3), center + Vector2(-23, -13)
+	]), Color("#21131b"))
+	draw_line(center + Vector2(-28, -43), center + Vector2(-15, -51), Color(c.r, c.g, c.b, 0.9), 2.0, true)
+	draw_line(center + Vector2(28, -43), center + Vector2(15, -51), Color(c.r, c.g, c.b, 0.9), 2.0, true)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-23, -32), center + Vector2(-4, -28), center + Vector2(-11, -20),
+		center + Vector2(-23, -23)
+	]), eye_color)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(23, -32), center + Vector2(4, -28), center + Vector2(11, -20),
+		center + Vector2(23, -23)
+	]), eye_color)
+	draw_circle(center + Vector2(-13, -25), 2.0, Color("#fff4d2"))
+	draw_circle(center + Vector2(13, -25), 2.0, Color("#fff4d2"))
+	draw_line(center + Vector2(-15, 2), center + Vector2(0, 20), Color(c.r, c.g, c.b, 0.95), 2.0, true)
+	draw_line(center + Vector2(15, 2), center + Vector2(0, 20), Color(c.r, c.g, c.b, 0.95), 2.0, true)
+	draw_colored_polygon(PackedVector2Array([
+		center + Vector2(-9, 14), center + Vector2(0, 9), center + Vector2(9, 14),
+		center + Vector2(0, 28)
+	]), Color(0.98, 0.55, 0.26, 0.88))
+	# Fine sparks orbit the portrait in the same palette as the active realm.
+	for i in range(5):
+		var a: float = pulse * 0.4 + TAU * float(i) / 5.0
+		var spark: Vector2 = center + Vector2(cos(a), sin(a)) * (99.0 + 5.0 * sin(pulse * 2.0 + a))
+		draw_circle(spark, 1.5 + 0.6 * absf(sin(pulse * 2.0 + a)), Color(1.0, 0.68, 0.36, 0.78))
 
 func _boss_name(stage: int) -> String:
 	return BOSS_NAMES[posmod(stage - 1, BOSS_NAMES.size())]
@@ -488,13 +543,33 @@ func _panel(pos: Vector2, size: Vector2) -> Panel:
 	panel.position = pos
 	panel.size = size
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.035, 0.022, 0.042, 0.91)
+	style.bg_color = Color(0.035, 0.022, 0.042, 0.94)
 	style.border_color = Color(0.62, 0.29, 0.18, 0.92)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(10)
-	style.shadow_color = Color(0, 0, 0, 0.55)
-	style.shadow_size = 14
+	style.shadow_color = Color(0, 0, 0, 0.58)
+	style.shadow_size = 16
+	style.content_margin_left = 10
+	style.content_margin_right = 10
+	style.content_margin_top = 8
+	style.content_margin_bottom = 8
 	panel.add_theme_stylebox_override("panel", style)
+	# A restrained inner keyline and a warm top edge make each HUD slab feel forged.
+	var inner := Panel.new()
+	inner.position = Vector2(4, 4)
+	inner.size = size - Vector2(8, 8)
+	var inner_style := StyleBoxFlat.new()
+	inner_style.bg_color = Color(0, 0, 0, 0)
+	inner_style.border_color = Color(0.82, 0.48, 0.27, 0.18)
+	inner_style.set_border_width_all(1)
+	inner_style.set_corner_radius_all(7)
+	inner.add_theme_stylebox_override("panel", inner_style)
+	panel.add_child(inner)
+	var top_edge := ColorRect.new()
+	top_edge.position = Vector2(14, 1)
+	top_edge.size = Vector2(size.x - 28, 1)
+	top_edge.color = Color(0.94, 0.57, 0.31, 0.48)
+	panel.add_child(top_edge)
 	add_child(panel)
 	return panel
 
