@@ -115,7 +115,7 @@ jobs:
           fi
           chmod +x android/build/gradlew
           # Mirror Godot's Install Android Build Template metadata exactly.
-          printf '%s\n' "4.5.1.stable.official.f62fdbde1" > android/.build_version
+          printf '%s\n' "4.5.1.stable" > android/.build_version
           : > android/build/.gdignore
           echo "Android build template installed from $TEMPLATE_ZIP"
           echo "Template version metadata: $(cat android/.build_version)"
