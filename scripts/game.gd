@@ -4,12 +4,16 @@ const SAVE_PATH := "user://godforge_save.cfg"
 const UPGRADE_NAMES := ["FORGE HAMMER", "SOUL ENGINE", "RUNE OF RUIN", "GODSLAYER EDGE"]
 const UPGRADE_DESC := ["More power per strike", "Earn energy while idle", "Increase all production", "Deal more damage to bosses"]
 const UPGRADE_BASE_COST := [25.0, 80.0, 180.0, 320.0]
+const BOSS_NAMES := ["THE HOLLOW TITAN", "THE ASHEN WYRM", "THE VEIL QUEEN", "THE IRON SAINT"]
+const UPGRADE_GLYPHS := ["⚒", "◉", "ᚱ", "✦"]
 
 var rng := RandomNumberGenerator.new()
 var stars: Array[Vector3] = []
 var pulse := 0.0
 var hit_flash := 0.0
 var core_recoil := 0.0
+var critical_flash := 0.0
+var boss_transition_flash := 0.0
 var ember_particles: Array[Vector4] = []
 var energy := 0.0
 var click_power := 1.0
@@ -44,6 +48,8 @@ func _process(delta: float) -> void:
 	pulse += delta
 	hit_flash = maxf(0.0, hit_flash - delta * 2.8)
 	core_recoil = move_toward(core_recoil, 0.0, delta * 4.5)
+	critical_flash = maxf(0.0, critical_flash - delta * 2.2)
+	boss_transition_flash = maxf(0.0, boss_transition_flash - delta * 1.35)
 	for i in range(ember_particles.size() - 1, -1, -1):
 		var ember := ember_particles[i]
 		ember.x += ember.z * delta
@@ -92,6 +98,8 @@ func _draw() -> void:
 		var p := Vector2(star.x * size.x, star.y * size.y)
 		var twinkle := 0.18 + 0.34 * absf(sin(pulse * star.z + star.x * 20.0))
 		draw_circle(p, 0.6 + star.z * 1.1, Color(1.0, 0.64, 0.34, twinkle))
+	# A translucent portrait behind the gatekeeper panel gives each realm a distinct boss silhouette.
+	_draw_boss_portrait(Vector2(size.x * 0.858, size.y * 0.445), boss_stage)
 	var center := Vector2(size.x * 0.5, size.y * 0.48 + core_recoil * 9.0)
 	var core_size := 1.0 + 0.035 * sin(pulse * 2.2) + hit_flash * 0.12
 	# Wide atmospheric bloom.
@@ -126,12 +134,68 @@ func _draw() -> void:
 		draw_circle(p, 2.0 + hit_flash, Color(1.0, 0.58, 0.24, 0.8))
 	for ember in ember_particles:
 		draw_circle(Vector2(ember.x, ember.y), 1.4 + hit_flash, Color(1.0, 0.49, 0.16, 0.72))
+	# Critical strikes create a bright expanding rune shockwave.
+	if critical_flash > 0.0:
+		var crit_alpha: float = clampf(critical_flash, 0.0, 1.0)
+		draw_arc(center, 185.0 + (1.0 - crit_alpha) * 45.0, pulse * 0.8, pulse * 0.8 + TAU, 96, Color(1.0, 0.82, 0.35, crit_alpha * 0.9), 4.0, true)
+		for i in range(12):
+			var crit_angle: float = TAU * float(i) / 12.0 + pulse * 0.35
+			var crit_inner: Vector2 = center + Vector2(cos(crit_angle), sin(crit_angle)) * 165.0
+			var crit_outer: Vector2 = center + Vector2(cos(crit_angle), sin(crit_angle)) * 205.0
+			draw_line(crit_inner, crit_outer, Color(1.0, 0.76, 0.31, crit_alpha * 0.85), 3.0, true)
+	# Realm transition blooms through the ruined sanctum when a boss falls.
+	if boss_transition_flash > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, size), Color(1.0, 0.48, 0.18, boss_transition_flash * 0.24))
 	# Deep vignette and forged horizon.
 	draw_rect(Rect2(0, size.y - 145.0, size.x, 2), Color(0.75, 0.32, 0.19, 0.26))
 	draw_rect(Rect2(0, 87, size.x, 1), Color(0.75, 0.34, 0.19, 0.26))
 	for i in range(6):
 		var inset := float(i) * 7.0
 		draw_rect(Rect2(inset, inset, size.x - inset * 2.0, size.y - inset * 2.0), Color(0.22, 0.08, 0.1, 0.045), false, 1.0)
+
+func _draw_boss_portrait(center: Vector2, stage: int) -> void:
+	var bob: float = sin(pulse * 1.35 + float(stage)) * 4.0
+	var c: Color = Color("#b64b37")
+	match posmod(stage - 1, 4):
+		0:
+			c = Color("#b64b37")
+		1:
+			c = Color("#a6aebc")
+		2:
+			c = Color("#9a6ad0")
+		3:
+			c = Color("#d19b4d")
+	center.y += bob
+	draw_circle(center, 92.0 + sin(pulse * 1.8) * 4.0, Color(c.r, c.g, c.b, 0.075))
+	draw_arc(center, 83.0, pulse * 0.12, pulse * 0.12 + TAU * 0.72, 64, Color(c.r, c.g, c.b, 0.35), 2.0, true)
+	# Crown horns, shoulders and an armored torso form a readable monster silhouette.
+	var horns := PackedVector2Array([
+		center + Vector2(-38, -37), center + Vector2(-66, -79), center + Vector2(-61, -27),
+		center + Vector2(-29, -22), center + Vector2(29, -22), center + Vector2(61, -27),
+		center + Vector2(66, -79), center + Vector2(38, -37), center + Vector2(28, -54),
+		center + Vector2(-28, -54)
+	])
+	draw_colored_polygon(horns, Color(0.055, 0.035, 0.055, 0.96))
+	var shoulders := PackedVector2Array([
+		center + Vector2(-23, -9), center + Vector2(-76, 8), center + Vector2(-91, 28),
+		center + Vector2(-54, 44), center + Vector2(-34, 37), center + Vector2(34, 37),
+		center + Vector2(54, 44), center + Vector2(91, 28), center + Vector2(76, 8),
+		center + Vector2(23, -9)
+	])
+	draw_colored_polygon(shoulders, Color(0.09, 0.055, 0.075, 0.98))
+	draw_colored_polygon(PackedVector2Array([center + Vector2(-35, 28), center + Vector2(-27, 69), center + Vector2(0, 82), center + Vector2(27, 69), center + Vector2(35, 28)]), Color(0.045, 0.03, 0.05, 0.98))
+	draw_circle(center + Vector2(0, -24), 32.0, Color(0.055, 0.035, 0.055, 0.98))
+	draw_arc(center + Vector2(0, -24), 33.0, PI, TAU, 36, Color(c.r, c.g, c.b, 0.8), 2.0, true)
+	draw_circle(center + Vector2(-13, -25), 4.2 + sin(pulse * 3.0) * 1.2, Color(1.0, 0.24, 0.12, 0.95))
+	draw_circle(center + Vector2(13, -25), 4.2 + sin(pulse * 3.0 + 1.0) * 1.2, Color(1.0, 0.24, 0.12, 0.95))
+	draw_line(center + Vector2(-15, 5), center + Vector2(0, 25), Color(c.r, c.g, c.b, 0.8), 2.0, true)
+	draw_line(center + Vector2(15, 5), center + Vector2(0, 25), Color(c.r, c.g, c.b, 0.8), 2.0, true)
+	for i in range(3):
+		var rib_y: float = 39.0 + float(i) * 9.0
+		draw_line(center + Vector2(-22 + float(i) * 3.0, rib_y), center + Vector2(22 - float(i) * 3.0, rib_y), Color(c.r, c.g, c.b, 0.25), 1.5, true)
+
+func _boss_name(stage: int) -> String:
+	return BOSS_NAMES[posmod(stage - 1, BOSS_NAMES.size())]
 
 func _show_splash() -> void:
 	_clear_ui()
@@ -219,8 +283,8 @@ func _build_game_ui() -> void:
 	ui_labels["hit"] = _label("TAP TO STRIKE", Vector2(510, 420), Vector2(260, 25), 12, Color("#d58b4c"))
 	ui_labels["hit"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_panel(Vector2(945, 118), Vector2(305, 340))
-	_label("GATEKEEPER", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
-	ui_labels["boss"] = _label("THE HOLLOW TITAN", Vector2(968, 168), Vector2(250, 24), 13, Color("#f0d9c2"))
+	_label("REALM GATEKEEPER", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
+	ui_labels["boss"] = _label(_boss_name(boss_stage), Vector2(968, 168), Vector2(250, 24), 13, Color("#f0d9c2"))
 	boss_bar = ProgressBar.new()
 	boss_bar.position = Vector2(968, 208)
 	boss_bar.size = Vector2(255, 18)
@@ -255,6 +319,10 @@ func _build_game_ui() -> void:
 		var index := i
 		var card := _button("", Vector2(card_x[i], 520), Vector2(290, 154), false)
 		card.add_theme_font_size_override("font_size", 14)
+		card.add_theme_color_override("font_color", Color("#f4dfc5"))
+		card.add_theme_color_override("font_hover_color", Color("#fff0c9"))
+		card.add_theme_color_override("font_disabled_color", Color("#8b7779"))
+		card.alignment = HORIZONTAL_ALIGNMENT_CENTER
 		card.pressed.connect(func(): _buy_upgrade(index))
 		ui_labels["upgrade_%d" % i] = card
 	_label("CLICK  •  COLLECT  •  ASCEND", Vector2(0, 690), Vector2(1280, 20), 10, Color("#77646b")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -271,6 +339,7 @@ func _strike_core() -> void:
 	var critical := rng.randf() < 0.08
 	if critical:
 		damage *= 5.0
+		critical_flash = 1.0
 	energy += damage
 	boss_hp -= damage * boss_damage
 	if ui_labels.has("hit"):
@@ -282,8 +351,10 @@ func _strike_core() -> void:
 		boss_max_hp *= 1.72
 		boss_hp = boss_max_hp
 		multiplier *= 1.08
+		boss_transition_flash = 1.0
+		critical_flash = 0.0
 		if ui_labels.has("boss_hint"):
-			ui_labels["boss_hint"].text = "TITAN DEFEATED!\n+1 GODSHARD  •  POWER +8%"
+			ui_labels["boss_hint"].text = "GATEKEEPER SLAIN!\n+1 GODSHARD  •  POWER +8%"
 	_refresh_ui()
 
 func _buy_upgrade(index: int) -> void:
@@ -326,7 +397,7 @@ func _refresh_ui() -> void:
 		ui_labels["power"].text = "STRIKE POWER\n" + _format_number(click_power * multiplier)
 		ui_labels["crit"].text = "CRITICAL CHANCE\n8%  •  x5 DAMAGE"
 		ui_labels["dps"].text = "IDLE OUTPUT\n" + _format_number(idle_rate * multiplier) + " / sec"
-		ui_labels["boss"].text = "THE HOLLOW TITAN  •  %02d" % boss_stage
+		ui_labels["boss"].text = _boss_name(boss_stage) + "  •  %02d" % boss_stage
 		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " HP"
 	if boss_bar != null and is_instance_valid(boss_bar):
 		boss_bar.max_value = boss_max_hp
@@ -335,7 +406,7 @@ func _refresh_ui() -> void:
 		var key := "upgrade_%d" % i
 		if ui_labels.has(key):
 			var card: Button = ui_labels[key]
-			card.text = "%s  •  LV %d\n%s\nCOST  %s" % [UPGRADE_NAMES[i], upgrade_levels[i], UPGRADE_DESC[i], _format_number(_upgrade_cost(i))]
+			card.text = "%s   %s\n━━━━━━━━━━━━\nLV  %02d   •   %s\n%s\n✦  COST  %s" % [UPGRADE_GLYPHS[i], UPGRADE_NAMES[i], upgrade_levels[i], "FORGED" if upgrade_levels[i] > 0 else "AVAILABLE", UPGRADE_DESC[i], _format_number(_upgrade_cost(i))]
 			card.disabled = energy < _upgrade_cost(i)
 			card.modulate = Color(1, 1, 1, 1) if not card.disabled else Color(0.65, 0.58, 0.58, 1)
 
@@ -355,12 +426,12 @@ func _panel(pos: Vector2, size: Vector2) -> Panel:
 	panel.position = pos
 	panel.size = size
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.055, 0.035, 0.055, 0.92)
-	style.border_color = Color(0.53, 0.25, 0.16, 0.72)
+	style.bg_color = Color(0.045, 0.028, 0.05, 0.78)
+	style.border_color = Color(0.62, 0.29, 0.18, 0.86)
 	style.set_border_width_all(1)
-	style.set_corner_radius_all(9)
-	style.shadow_color = Color(0, 0, 0, 0.3)
-	style.shadow_size = 8
+	style.set_corner_radius_all(10)
+	style.shadow_color = Color(0, 0, 0, 0.42)
+	style.shadow_size = 12
 	panel.add_theme_stylebox_override("panel", style)
 	add_child(panel)
 	return panel
@@ -374,10 +445,12 @@ func _button(text_value: String, pos: Vector2, size: Vector2, gold: bool) -> But
 	button.add_theme_color_override("font_color", Color("#f5e5d2"))
 	button.add_theme_color_override("font_hover_color", Color("#fff4d8"))
 	var normal := StyleBoxFlat.new()
-	normal.bg_color = Color("#4c281f") if gold else Color(0.07, 0.045, 0.065, 0.96)
-	normal.border_color = Color("#d58b4c") if gold else Color("#75412f")
+	normal.bg_color = Color("#4c281f") if gold else Color(0.045, 0.028, 0.05, 0.93)
+	normal.border_color = Color("#d58b4c") if gold else Color("#6e3c32")
 	normal.set_border_width_all(2 if gold else 1)
-	normal.set_corner_radius_all(8)
+	normal.set_corner_radius_all(9)
+	normal.shadow_color = Color(0.0, 0.0, 0.0, 0.35)
+	normal.shadow_size = 5
 	normal.content_margin_left = 12
 	normal.content_margin_right = 12
 	normal.content_margin_top = 8
