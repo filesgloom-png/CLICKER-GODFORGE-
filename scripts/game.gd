@@ -14,6 +14,9 @@ var hit_flash := 0.0
 var core_recoil := 0.0
 var critical_flash := 0.0
 var boss_transition_flash := 0.0
+var boss_hit_flash := 0.0
+var boss_shake := 0.0
+var combat_popups: Array[Dictionary] = []
 var upgrade_feedback_time := [0.0, 0.0, 0.0, 0.0]
 var ember_particles: Array[Vector4] = []
 var energy := 0.0
@@ -51,6 +54,18 @@ func _process(delta: float) -> void:
 	core_recoil = move_toward(core_recoil, 0.0, delta * 4.5)
 	critical_flash = maxf(0.0, critical_flash - delta * 2.2)
 	boss_transition_flash = maxf(0.0, boss_transition_flash - delta * 1.35)
+	boss_hit_flash = maxf(0.0, boss_hit_flash - delta * 3.2)
+	boss_shake = move_toward(boss_shake, 0.0, delta * 4.8)
+	if boss_bar != null and is_instance_valid(boss_bar):
+		boss_bar.modulate = Color(1.0, 1.0 + boss_hit_flash * 0.24, 1.0 + boss_hit_flash * 0.10, 1.0)
+	for popup_index in range(combat_popups.size() - 1, -1, -1):
+		var popup: Dictionary = combat_popups[popup_index]
+		popup["life"] = float(popup["life"]) - delta
+		var popup_position: Vector2 = popup["position"]
+		popup["position"] = popup_position + Vector2(0.0, -42.0 * delta)
+		combat_popups[popup_index] = popup
+		if float(popup["life"]) <= 0.0:
+			combat_popups.remove_at(popup_index)
 	for i in range(ember_particles.size() - 1, -1, -1):
 		var ember := ember_particles[i]
 		ember.x += ember.z * delta
@@ -139,6 +154,12 @@ func _draw() -> void:
 		draw_circle(p, 2.0 + hit_flash, Color(1.0, 0.58, 0.24, 0.8))
 	# Keep the realm boss in the open channel between the core and the right HUD; placing it under the opaque panel hid it completely.
 	_draw_boss_portrait(Vector2(size.x * 0.674, size.y * 0.445), boss_stage)
+	for popup in combat_popups:
+		var popup_life: float = clampf(float(popup["life"]), 0.0, 1.0)
+		var popup_position: Vector2 = popup["position"]
+		var popup_color: Color = popup["color"]
+		popup_color.a *= minf(1.0, popup_life * 2.2)
+		draw_string(ThemeDB.fallback_font, Vector2(popup_position.x - 90.0, popup_position.y), str(popup["text"]), HORIZONTAL_ALIGNMENT_CENTER, 180.0, int(popup["size"]), popup_color)
 	for ember in ember_particles:
 		draw_circle(Vector2(ember.x, ember.y), 1.4 + hit_flash, Color(1.0, 0.49, 0.16, 0.72))
 	# Critical strikes create a bright expanding rune shockwave.
@@ -217,7 +238,8 @@ func _draw_boss_portrait(center: Vector2, stage: int) -> void:
 			c = Color("#d19b4d")
 			eye_color = Color("#ffe19a")
 	center.y += bob
-	var aura: float = 0.08 + 0.025 * sin(pulse * 1.8)
+	center.x += sin(pulse * 54.0) * boss_shake * 7.0
+	var aura: float = 0.08 + 0.025 * sin(pulse * 1.8) + boss_hit_flash * 0.22
 	# A layered, stage-tinted halo separates the gatekeeper from the cathedral.
 	draw_circle(center, 99.0 + sin(pulse * 1.8) * 4.0, Color(c.r, c.g, c.b, aura))
 	draw_arc(center, 88.0, pulse * 0.12, pulse * 0.12 + TAU * 0.72, 72, Color(c.r, c.g, c.b, 0.42), 2.0, true)
@@ -494,7 +516,12 @@ func _strike_core() -> void:
 		damage *= 5.0
 		critical_flash = 1.0
 	energy += damage
-	boss_hp -= damage * boss_damage
+	var boss_hit_damage := damage * boss_damage
+	boss_hp -= boss_hit_damage
+	boss_hit_flash = 1.0
+	boss_shake = 1.0
+	combat_popups.append({"text": ("CRITICAL  -" if critical else "-") + _format_number(boss_hit_damage), "position": Vector2(862.0 + rng.randf_range(-24.0, 24.0), 286.0), "life": 1.0, "size": 23 if critical else 18, "color": Color("#ffe28b") if critical else Color("#ff8c72")})
+	combat_popups.append({"text": "+" + _format_number(damage) + " ENERGY", "position": Vector2(640.0 + rng.randf_range(-20.0, 20.0), 284.0), "life": 0.82, "size": 15, "color": Color("#ffc879")})
 	if ui_labels.has("hit"):
 		ui_labels["hit"].text = ("CRITICAL HIT!  +" if critical else "CORE STRUCK  +") + _format_number(damage)
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
@@ -506,6 +533,9 @@ func _strike_core() -> void:
 		multiplier *= 1.08
 		boss_transition_flash = 1.0
 		critical_flash = 0.0
+		boss_hit_flash = 0.0
+		boss_shake = 0.0
+		combat_popups.append({"text": "GATEKEEPER SHATTERED", "position": Vector2(862.0, 230.0), "life": 1.35, "size": 20, "color": Color("#ffe6a0")})
 		if ui_labels.has("boss_hint"):
 			ui_labels["boss_hint"].text = "GATEKEEPER SLAIN!\n+1 GODSHARD  •  POWER +8%"
 	_refresh_ui()
