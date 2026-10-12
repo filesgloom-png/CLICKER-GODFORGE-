@@ -18,6 +18,7 @@ var boss_hit_flash := 0.0
 var boss_shake := 0.0
 var combat_popups: Array[Dictionary] = []
 var upgrade_feedback_time := [0.0, 0.0, 0.0, 0.0]
+var energy_flash := 0.0
 var ember_particles: Array[Vector4] = []
 var energy := 0.0
 var click_power := 1.0
@@ -70,6 +71,7 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	pulse += delta
 	hit_flash = maxf(0.0, hit_flash - delta * 2.8)
+	energy_flash = maxf(0.0, energy_flash - delta * 2.4)
 	core_recoil = move_toward(core_recoil, 0.0, delta * 4.5)
 	critical_flash = maxf(0.0, critical_flash - delta * 2.2)
 	boss_transition_flash = maxf(0.0, boss_transition_flash - delta * 1.35)
@@ -436,6 +438,22 @@ func _build_game_ui() -> void:
 	ui_labels["power"] = _label("СИЛА УДАРА\n1", Vector2(52, 180), Vector2(210, 52), 18, Color("#f2b75d"))
 	ui_labels["crit"] = _label("ШАНС КРИТА\n5%", Vector2(52, 250), Vector2(210, 48), 14, Color("#d98a69"))
 	ui_labels["dps"] = _label("ДОХОД В ПРОСТОЕ\n0 / сек", Vector2(52, 316), Vector2(210, 48), 14, Color("#c7a7a0"))
+	ui_labels["lifetime"] = _label("ВСЕГО ПОЛУЧЕНО  0", Vector2(52, 366), Vector2(210, 22), 11, Color("#d8b68c"))
+	ui_labels["clicks"] = _label("УДАРОВ ПО ЯДРУ  0", Vector2(52, 389), Vector2(210, 20), 11, Color("#b99b9d"))
+	ui_labels["milestone"] = _label("ПУТЬ К МИРУ 10", Vector2(52, 415), Vector2(210, 18), 10, Color("#e5bd7e"))
+	var milestone_track := ColorRect.new()
+	milestone_track.position = Vector2(52, 440)
+	milestone_track.size = Vector2(210, 5)
+	milestone_track.color = Color("#39232d")
+	milestone_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(milestone_track)
+	var milestone_fill := ColorRect.new()
+	milestone_fill.position = milestone_track.position
+	milestone_fill.size = Vector2(0, 5)
+	milestone_fill.color = Color("#e6a45d")
+	milestone_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(milestone_fill)
+	ui_labels["milestone_fill"] = milestone_fill
 	_label("ЯДРО ОТЗЫВАЕТСЯ НА КАЖДЫЙ УДАР", Vector2(310, 118), Vector2(660, 24), 12, Color("#b98a72")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	core_button = _button("", Vector2(505, 215), Vector2(270, 220), false)
 	var core_normal := StyleBoxFlat.new()
@@ -554,9 +572,27 @@ func _build_upgrade_card(index: int, pos: Vector2) -> void:
 	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_state_%d" % index] = state_label
 
+	var preview_label := _label("", pos + Vector2(16, 84), Vector2(258, 16), 10, Color("#c99b76"))
+	preview_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_preview_%d" % index] = preview_label
+
 	var cost_label := _label("✦  25 ЭНЕРГИИ", pos + Vector2(16, 122), Vector2(258, 22), 13, Color("#f3bd70"))
 	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_cost_%d" % index] = cost_label
+
+	var progress_track := ColorRect.new()
+	progress_track.position = pos + Vector2(16, 147)
+	progress_track.size = Vector2(258, 4)
+	progress_track.color = Color("#39232d")
+	progress_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(progress_track)
+	var progress_fill := ColorRect.new()
+	progress_fill.position = progress_track.position
+	progress_fill.size = Vector2(0, 4)
+	progress_fill.color = Color("#e6a45d")
+	progress_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(progress_fill)
+	ui_labels["upgrade_progress_%d" % index] = progress_fill
 
 
 
@@ -822,6 +858,7 @@ func _strike_core() -> void:
 		critical_flash = 1.0
 	energy += damage
 	lifetime_energy_earned += damage
+	energy_flash = 1.0
 	var boss_hit_damage := damage * boss_damage
 	boss_hp -= boss_hit_damage
 	boss_hit_flash = 1.0
@@ -842,6 +879,7 @@ func _strike_core() -> void:
 		last_boss_reward = 250.0 * boss_stage
 		energy += last_boss_reward
 		lifetime_energy_earned += last_boss_reward
+		energy_flash = 1.0
 		victory_banner_time = 2.2
 		victory_banner_text = "СТРАЖ СОКРУШЁН  •  +%s ЭНЕРГИИ" % _format_number(last_boss_reward)
 		boss_max_hp *= 1.72
@@ -864,6 +902,7 @@ func _buy_upgrade(index: int) -> void:
 			ui_labels["power"].text = "НЕДОСТАТОЧНО ЭНЕРГИИ"
 		return
 	energy -= cost
+	energy_flash = 0.65
 	total_upgrades += 1
 	upgrade_levels[index] += 1
 	_check_achievements()
@@ -901,6 +940,15 @@ func _refresh_ui() -> void:
 		journal_button.text = "ЛЕТОПИСЬ  %d/9" % _unlocked_achievement_count()
 	if ui_labels.has("energy"):
 		ui_labels["energy"].text = "ЭНЕРГИЯ  " + _format_number(energy)
+		ui_labels["energy"].add_theme_color_override("font_color", Color("#fff0a3").lerp(Color("#f5c16e"), 1.0 - energy_flash))
+		ui_labels["lifetime"].text = "ВСЕГО ПОЛУЧЕНО  " + _format_number(lifetime_energy_earned)
+		ui_labels["clicks"].text = "УДАРОВ ПО ЯДРУ  " + _format_number(total_clicks)
+		var milestone_target := 10 if boss_stage < 10 else 25
+		var milestone_start := 0 if milestone_target == 10 else 10
+		var milestone_ratio := clampf(float(boss_stage - milestone_start) / float(milestone_target - milestone_start), 0.0, 1.0)
+		ui_labels["milestone"].text = "ПУТЬ К МИРУ %02d  •  %d%%" % [milestone_target, int(round(milestone_ratio * 100.0))]
+		var milestone_fill: ColorRect = ui_labels["milestone_fill"]
+		milestone_fill.size = Vector2(210.0 * milestone_ratio, 5.0)
 		ui_labels["rate"].text = _format_number(idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)) + " / СЕК"
 		ui_labels["stage"].text = "МИР  %02d" % boss_stage
 		ui_labels["shards"].text = "ОСКОЛКИ БОГА  %d" % (boss_stage - 1)
@@ -932,12 +980,18 @@ func _refresh_ui() -> void:
 		var card: Button = ui_labels["upgrade_%d" % i]
 		var state_label: Label = ui_labels["upgrade_state_%d" % i]
 		var cost_label: Label = ui_labels["upgrade_cost_%d" % i]
+		var preview_label: Label = ui_labels["upgrade_preview_%d" % i]
+		var progress_fill: ColorRect = ui_labels["upgrade_progress_%d" % i]
 		var level_label: Label = ui_labels["upgrade_level_%d" % i]
 		var accent: ColorRect = ui_labels["upgrade_accent_%d" % i]
 		card.disabled = not can_afford
 		card.modulate = Color.WHITE
 		level_label.text = "УРОВЕНЬ  %02d" % level
 		cost_label.text = "✦  %s ЭНЕРГИИ" % _format_number(cost)
+		preview_label.text = _upgrade_next_effect(i)
+		var affordability_ratio := clampf(energy / maxf(cost, 1.0), 0.0, 1.0)
+		progress_fill.size = Vector2(258.0 * affordability_ratio, 4.0)
+		progress_fill.color = Color("#f2bb70") if can_afford else (Color("#98513b") if affordability_ratio >= 0.5 else Color("#513541"))
 		if upgrade_feedback_time[i] > 0.0:
 			state_label.text = "УЛУЧШЕНО!  +1 УРОВЕНЬ"
 			state_label.add_theme_color_override("font_color", Color("#ffe6a0"))
@@ -979,6 +1033,18 @@ func _refresh_ui() -> void:
 		card.add_theme_stylebox_override("hover", hover)
 		card.add_theme_stylebox_override("pressed", pressed)
 		card.add_theme_stylebox_override("disabled", disabled_style)
+
+func _upgrade_next_effect(index: int) -> String:
+	match index:
+		0:
+			return "СЛЕДУЮЩИЙ УРОВЕНЬ: СИЛА ×1,55"
+		1:
+			return "СЛЕДУЮЩИЙ УРОВЕНЬ: +%s / сек" % _format_number(pow(1.32, upgrade_levels[index]))
+		2:
+			return "СЛЕДУЮЩИЙ УРОВЕНЬ: ВСЁ ×1,18"
+		3:
+			return "СЛЕДУЮЩИЙ УРОВЕНЬ: УРОН ×1,45"
+	return ""
 
 func _format_number(value: float) -> String:
 	if value >= 1.0e12:
