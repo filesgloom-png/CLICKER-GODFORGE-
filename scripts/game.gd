@@ -8,6 +8,9 @@ const UPGRADE_BASE_COST := [25.0, 80.0, 180.0, 320.0]
 var rng := RandomNumberGenerator.new()
 var stars: Array[Vector3] = []
 var pulse := 0.0
+var hit_flash := 0.0
+var core_recoil := 0.0
+var ember_particles: Array[Vector4] = []
 var energy := 0.0
 var click_power := 1.0
 var idle_rate := 0.0
@@ -39,6 +42,23 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	pulse += delta
+	hit_flash = maxf(0.0, hit_flash - delta * 2.8)
+	core_recoil = move_toward(core_recoil, 0.0, delta * 4.5)
+	for i in range(ember_particles.size() - 1, -1, -1):
+		var ember := ember_particles[i]
+		ember.x += ember.z * delta
+		ember.y += ember.w * delta
+		ember.z *= 0.985
+		ember.w -= 22.0 * delta
+		ember_particles[i] = ember
+		if ember.y < -10.0 or ember.w < -140.0:
+			ember_particles.remove_at(i)
+	if playing and rng.randf() < delta * 12.0:
+		var angle := rng.randf_range(0.0, TAU)
+		var radius := rng.randf_range(80.0, 140.0)
+		var ember_center := Vector2(640.0, 345.0)
+		var point := ember_center + Vector2(cos(angle), sin(angle)) * radius
+		ember_particles.append(Vector4(point.x, point.y, rng.randf_range(-22.0, 22.0), rng.randf_range(-45.0, -12.0)))
 	idle_clock += delta
 	autosave_clock += delta
 	if idle_clock >= 1.0:
@@ -57,36 +77,61 @@ func _process(delta: float) -> void:
 
 func _draw() -> void:
 	var size := get_rect().size
-	draw_rect(Rect2(Vector2.ZERO, size), Color("#08070d"))
-	for y in range(0, int(size.y), 4):
-		var shade := 0.015 + 0.012 * float(y) / maxf(size.y, 1.0)
-		draw_rect(Rect2(0, y, size.x, 4), Color(0.12, 0.055, 0.07, shade))
-	for star in stars:
+	draw_rect(Rect2(Vector2.ZERO, size), Color("#07060c"))
+	for y in range(0, int(size.y), 3):
+		var t := float(y) / maxf(size.y, 1.0)
+		draw_rect(Rect2(0, y, size.x, 3), Color(0.15, 0.045, 0.065, 0.018 + t * 0.025))
+	# Distant ruined cathedral ribs and stained-glass glow.
+	for side in [-1.0, 1.0]:
+		var x := size.x * (0.5 + side * 0.31)
+		draw_line(Vector2(x, 0), Vector2(x + side * 58.0, size.y * 0.34), Color(0.35, 0.15, 0.17, 0.18), 3.0, true)
+		draw_line(Vector2(x + side * 58.0, size.y * 0.34), Vector2(x + side * 90.0, size.y * 0.78), Color(0.55, 0.22, 0.16, 0.12), 2.0, true)
+		draw_arc(Vector2(x, size.y * 0.34), 95.0, PI if side < 0.0 else 0.0, TAU if side < 0.0 else PI, 48, Color(0.55, 0.24, 0.19, 0.13), 2.0, true)
+	for i in range(100):
+		var star := stars[i]
 		var p := Vector2(star.x * size.x, star.y * size.y)
-		var twinkle := 0.25 + 0.35 * absf(sin(pulse * star.z + star.x * 20.0))
-		draw_circle(p, 0.7 + star.z * 1.2, Color(1.0, 0.68, 0.36, twinkle))
-	var center := Vector2(size.x * 0.5, size.y * 0.48)
-	var core_size := 1.0 + 0.035 * sin(pulse * 2.2)
-	for i in range(8, 0, -1):
-		draw_circle(center, (42.0 + i * 10.0) * core_size, Color(0.9, 0.23, 0.08, 0.018 + float(8 - i) * 0.003))
-	draw_arc(center, 114.0 * core_size, pulse * 0.15, pulse * 0.15 + TAU * 0.78, 96, Color("#a84b29"), 2.0, true)
-	draw_arc(center, 137.0, -pulse * 0.11, -pulse * 0.11 + TAU * 0.66, 96, Color(0.95, 0.62, 0.24, 0.42), 1.5, true)
+		var twinkle := 0.18 + 0.34 * absf(sin(pulse * star.z + star.x * 20.0))
+		draw_circle(p, 0.6 + star.z * 1.1, Color(1.0, 0.64, 0.34, twinkle))
+	var center := Vector2(size.x * 0.5, size.y * 0.48 + core_recoil * 9.0)
+	var core_size := 1.0 + 0.035 * sin(pulse * 2.2) + hit_flash * 0.12
+	# Wide atmospheric bloom.
+	for i in range(12, 0, -1):
+		var radius := (52.0 + i * 11.0) * core_size
+		draw_circle(center, radius, Color(0.9, 0.19 + hit_flash * 0.4, 0.055, 0.012 + float(12 - i) * 0.0025))
+	# Broken outer rune circles.
+	draw_arc(center, 155.0 * core_size, pulse * 0.08, pulse * 0.08 + TAU * 0.72, 120, Color(0.55, 0.24, 0.2, 0.26), 2.0, true)
+	draw_arc(center, 139.0 * core_size, -pulse * 0.12, -pulse * 0.12 + TAU * 0.58, 120, Color(0.96, 0.57, 0.25, 0.44), 1.4, true)
+	draw_arc(center, 112.0 * core_size, pulse * 0.2, pulse * 0.2 + TAU * 0.82, 120, Color(0.75, 0.31, 0.2, 0.55), 2.0, true)
+	for i in range(16):
+		var a := TAU * float(i) / 16.0 + pulse * 0.12
+		var inner := center + Vector2(cos(a), sin(a)) * 119.0
+		var outer := center + Vector2(cos(a), sin(a)) * (135.0 + 4.0 * sin(pulse * 2.0 + a))
+		draw_line(inner, outer, Color(0.88, 0.48, 0.23, 0.72), 2.0, true)
+		if i % 2 == 0:
+			var rune := center + Vector2(cos(a), sin(a)) * 151.0
+			draw_line(rune + Vector2(-4, -4), rune + Vector2(4, 4), Color(0.75, 0.35, 0.24, 0.4), 1.4, true)
+			draw_line(rune + Vector2(-4, 4), rune + Vector2(4, -4), Color(0.75, 0.35, 0.24, 0.4), 1.4, true)
+	# Forged heart with layered metallic shell.
+	draw_circle(center, 61.0 * core_size, Color(1.0, 0.22, 0.04, 0.16 + hit_flash * 0.25))
+	draw_circle(center, 48.0 * core_size, Color(0.22, 0.075, 0.085, 0.98))
+	draw_arc(center, 46.0 * core_size, pulse * 0.3, pulse * 0.3 + TAU * 0.9, 64, Color(0.75, 0.39, 0.23, 0.9), 3.0, true)
+	draw_circle(center, 36.0 * core_size, Color("#35151b"))
+	draw_circle(center, 27.0 * core_size, Color("#a53620"))
+	draw_circle(center, 19.0 * core_size, Color("#f17a2e"))
+	draw_circle(center, 12.0 * core_size, Color("#ffc36a"))
+	draw_circle(center, 6.0 * core_size, Color("#fff4d2"))
 	for i in range(12):
-		var a := TAU * float(i) / 12.0 + pulse * 0.12
-		var inner := center + Vector2(cos(a), sin(a)) * 121.0
-		var outer := center + Vector2(cos(a), sin(a)) * (132.0 + 3.0 * sin(pulse * 2.0 + a))
-		draw_line(inner, outer, Color("#d58b4c"), 2.0, true)
-	draw_circle(center, 56.0 * core_size, Color(0.95, 0.23, 0.07, 0.18))
-	draw_circle(center, 37.0 * core_size, Color("#35151b"))
-	draw_circle(center, 27.0 * core_size, Color("#9d321e"))
-	draw_circle(center, 17.0 * core_size, Color("#f4a64e"))
-	draw_circle(center, 8.0 * core_size, Color("#fff0bf"))
-	for i in range(9):
-		var a := TAU * float(i) / 9.0 - pulse * 0.3
-		var p := center + Vector2(cos(a), sin(a)) * (72.0 + 9.0 * sin(pulse + a))
-		draw_circle(p, 2.0, Color(1.0, 0.55, 0.2, 0.8))
-	draw_line(Vector2(0, 88), Vector2(size.x, 88), Color(0.75, 0.34, 0.19, 0.26), 1.0)
-	draw_line(Vector2(0, size.y - 132), Vector2(size.x, size.y - 132), Color(0.75, 0.34, 0.19, 0.24), 1.0)
+		var a := TAU * float(i) / 12.0 - pulse * 0.3
+		var p := center + Vector2(cos(a), sin(a)) * (76.0 + 8.0 * sin(pulse + a))
+		draw_circle(p, 2.0 + hit_flash, Color(1.0, 0.58, 0.24, 0.8))
+	for ember in ember_particles:
+		draw_circle(Vector2(ember.x, ember.y), 1.4 + hit_flash, Color(1.0, 0.49, 0.16, 0.72))
+	# Deep vignette and forged horizon.
+	draw_rect(Rect2(0, size.y - 145.0, size.x, 2), Color(0.75, 0.32, 0.19, 0.26))
+	draw_rect(Rect2(0, 87, size.x, 1), Color(0.75, 0.34, 0.19, 0.26))
+	for i in range(6):
+		var inset := float(i) * 7.0
+		draw_rect(Rect2(inset, inset, size.x - inset * 2.0, size.y - inset * 2.0), Color(0.22, 0.08, 0.1, 0.045), false, 1.0)
 
 func _show_splash() -> void:
 	_clear_ui()
@@ -215,6 +260,13 @@ func _build_game_ui() -> void:
 	_label("CLICK  •  COLLECT  •  ASCEND", Vector2(0, 690), Vector2(1280, 20), 10, Color("#77646b")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _strike_core() -> void:
+	hit_flash = 1.0
+	core_recoil = 1.0
+	for i in range(22):
+		var angle := rng.randf_range(0.0, TAU)
+		var speed := rng.randf_range(55.0, 210.0)
+		var origin := Vector2(640.0, 345.0) + Vector2(cos(angle), sin(angle)) * rng.randf_range(24.0, 48.0)
+		ember_particles.append(Vector4(origin.x, origin.y, cos(angle) * speed, sin(angle) * speed))
 	var damage := click_power * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)
 	var critical := rng.randf() < 0.08
 	if critical:
