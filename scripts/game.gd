@@ -239,7 +239,9 @@ func _draw_boss_portrait(center: Vector2, stage: int) -> void:
 			eye_color = Color("#ffe19a")
 	center.y += bob
 	center.x += sin(pulse * 54.0) * boss_shake * 7.0
-	var aura: float = 0.08 + 0.025 * sin(pulse * 1.8) + boss_hit_flash * 0.22
+	var hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
+	var danger_pulse: float = (1.0 - hp_ratio) * 0.06 * (0.5 + 0.5 * sin(pulse * 5.0))
+	var aura: float = 0.08 + 0.025 * sin(pulse * 1.8) + boss_hit_flash * 0.22 + danger_pulse
 	# A layered, stage-tinted halo separates the gatekeeper from the cathedral.
 	draw_circle(center, 99.0 + sin(pulse * 1.8) * 4.0, Color(c.r, c.g, c.b, aura))
 	draw_arc(center, 88.0, pulse * 0.12, pulse * 0.12 + TAU * 0.72, 72, Color(c.r, c.g, c.b, 0.42), 2.0, true)
@@ -430,7 +432,17 @@ func _build_game_ui() -> void:
 	bg.corner_radius_bottom_right = 5
 	boss_bar.add_theme_stylebox_override("background", bg)
 	add_child(boss_bar)
+	ui_labels["boss_fill_style"] = fill
+	for marker_index in range(1, 4):
+		var hp_marker := ColorRect.new()
+		hp_marker.position = Vector2(968.0 + 255.0 * float(marker_index) / 4.0 - 1.0, 208.0)
+		hp_marker.size = Vector2(2.0, 18.0)
+		hp_marker.color = Color("#512832")
+		hp_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(hp_marker)
 	ui_labels["boss_hp"] = _label("500 / 500 HP", Vector2(968, 232), Vector2(255, 22), 12, Color("#d8b9a8"))
+	ui_labels["boss_threat"] = _label("THREAT: STABLE", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
+	ui_labels["boss_threat"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	ui_labels["boss_hint"] = _label("Break the Titan to claim\na Godshard.", Vector2(968, 277), Vector2(255, 48), 13, Color("#aa8b87"))
 	boost_button = _button("REWARDED AD x2  (DEMO)", Vector2(968, 365), Vector2(255, 52), true)
 	boost_button.add_theme_font_size_override("font_size", 13)
@@ -587,6 +599,19 @@ func _refresh_ui() -> void:
 		ui_labels["dps"].text = "IDLE OUTPUT\n" + _format_number(idle_rate * multiplier) + " / sec"
 		ui_labels["boss"].text = _boss_name(boss_stage) + "  •  %02d" % boss_stage
 		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " HP"
+		var hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
+		var threat_label: Label = ui_labels["boss_threat"]
+		if hp_ratio <= 0.2:
+			threat_label.text = "THREAT: CRITICAL"
+			threat_label.add_theme_color_override("font_color", Color("#ff715c"))
+		elif hp_ratio <= 0.5:
+			threat_label.text = "THREAT: ELEVATED"
+			threat_label.add_theme_color_override("font_color", Color("#e6a45d"))
+		else:
+			threat_label.text = "THREAT: STABLE"
+			threat_label.add_theme_color_override("font_color", Color("#d5a77a"))
+		var fill_style: StyleBoxFlat = ui_labels["boss_fill_style"]
+		fill_style.bg_color = Color("#ff573f") if hp_ratio <= 0.2 else (Color("#d47746") if hp_ratio <= 0.5 else Color("#c44738"))
 	if boss_bar != null and is_instance_valid(boss_bar):
 		boss_bar.max_value = boss_max_hp
 		boss_bar.value = maxf(0.0, boss_hp)
