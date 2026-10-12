@@ -96,13 +96,23 @@ jobs:
       - name: Install project Android build template
         shell: bash
         run: |
-          godot --headless --editor --path . --install-android-build-template
-          if [ ! -d android/build ]; then
-            echo "Android build template installation did not create android/build."
-            find . -maxdepth 3 -type f -path './android/*' -print
+          set -euo pipefail
+          TEMPLATE_ZIP="$HOME/.local/share/godot/export_templates/4.5.1.stable/android_source.zip"
+          if [ ! -s "$TEMPLATE_ZIP" ]; then
+            echo "Godot Android source template is missing: $TEMPLATE_ZIP"
+            find "$HOME/.local/share/godot/export_templates/4.5.1.stable" -maxdepth 1 -type f -printf '%f\n'
             exit 1
           fi
-          echo "Android build template installed."
+          mkdir -p android/build
+          unzip -q "$TEMPLATE_ZIP" -d android/build
+          if [ ! -f android/build/gradlew ] || [ ! -f android/build/build.gradle ]; then
+            echo "Android source template unpacked but required Gradle files are missing."
+            find android/build -maxdepth 2 -type f -printf '%p\n' | head -80
+            exit 1
+          fi
+          chmod +x android/build/gradlew
+          echo "Android build template installed from $TEMPLATE_ZIP"
+          ls -la android/build | head -40
 
       - name: Export Android ARM64 debug APK
         shell: bash
