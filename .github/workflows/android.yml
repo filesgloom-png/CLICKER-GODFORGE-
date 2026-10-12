@@ -120,16 +120,29 @@ jobs:
       - name: Export Android ARM64 debug APK
         shell: bash
         run: |
+          set +e
           sed -i "s|package/keystore/debug=\"[^\"]*\"|package/keystore/debug=\"$HOME/.android/debug.keystore\"|" export_presets.cfg
+          sed -i "s|package/keystore/release=\"[^\"]*\"|package/keystore/release=\"$HOME/.android/debug.keystore\"|" export_presets.cfg
+          sed -i 's|package/keystore/release_user="[^"]*"|package/keystore/release_user="androiddebugkey"|' export_presets.cfg
+          sed -i 's|package/keystore/release_password="[^"]*"|package/keystore/release_password="android"|' export_presets.cfg
+          echo "---- Effective Android signing preset ----"
+          grep -E '^package/(signed|keystore/)' export_presets.cfg
           mkdir -p build
           godot --headless --verbose --path . --export-debug "Android" "build/CLICKER-GODFORGE-debug.apk" 2>&1 | tee "$RUNNER_TEMP/godot-export.log"
+          EXPORT_STATUS=${PIPESTATUS[0]}
+          echo "Godot export exit code: $EXPORT_STATUS"
           echo "---- Export diagnostics ----"
-          grep -iE "error|warning|missing|keystore|sdk|java|gradle|template|configur" "$RUNNER_TEMP/godot-export.log" | tail -160 || true
+          grep -iE "error|warning|missing|keystore|sdk|java|gradle|template|configur" "$RUNNER_TEMP/godot-export.log" | tail -200 || true
           echo "---- Android SDK components ----"
           sdkmanager --list_installed | grep -E "platforms;android|build-tools|platform-tools|cmdline-tools" || true
+          echo "---- Java ----"
+          java -version 2>&1
           echo "---- Keystore ----"
-          ls -l "$HOME/.android/debug.keystore"
-          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey
+          ls -l "$HOME/.android/debug.keystore" || true
+          keytool -list -keystore "$HOME/.android/debug.keystore" -storepass android -alias androiddebugkey 2>&1 || true
+          if [ "$EXPORT_STATUS" -ne 0 ]; then
+            exit "$EXPORT_STATUS"
+          fi
           test -s build/CLICKER-GODFORGE-debug.apk
           file build/CLICKER-GODFORGE-debug.apk
           ls -lh build/CLICKER-GODFORGE-debug.apk
