@@ -120,7 +120,7 @@ jobs:
       - name: Export Android ARM64 debug APK
         shell: bash
         run: |
-          sed -i "s|package/keystore/release=\"[^\"]*\"|package/keystore/release=\"$HOME/.android/debug.keystore\"|" export_presets.cfg
+          sed -i "s|keystore/release=\"[^\"]*\"|keystore/release=\"$HOME/.android/debug.keystore\"|" export_presets.cfg
           mkdir -p build
           godot --headless --path . --export-debug "Android" "build/CLICKER-GODFORGE-debug.apk" 2>&1 | tee "$RUNNER_TEMP/godot-export.log"
           test -s build/CLICKER-GODFORGE-debug.apk
