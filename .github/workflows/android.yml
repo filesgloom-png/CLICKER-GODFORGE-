@@ -114,7 +114,10 @@ jobs:
             exit 1
           fi
           chmod +x android/build/gradlew
+          # The source ZIP does not include project-local version metadata; Godot requires it.
+          printf '%s\n' "4.5.1.stable" > android/build/version.txt
           echo "Android build template installed from $TEMPLATE_ZIP"
+          echo "Template version metadata: $(cat android/build/version.txt)"
           ls -la android/build | head -40
 
       - name: Export Android ARM64 debug APK
