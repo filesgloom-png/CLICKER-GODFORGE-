@@ -1,10 +1,10 @@
 extends Control
 
 const SAVE_PATH := "user://godforge_save.cfg"
-const UPGRADE_NAMES := ["FORGE HAMMER", "SOUL ENGINE", "RUNE OF RUIN", "GODSLAYER EDGE"]
-const UPGRADE_DESC := ["More power per strike", "Earn energy while idle", "Increase all production", "Deal more damage to bosses"]
+const UPGRADE_NAMES := ["МОЛОТ КУЗНИ", "ДВИГАТЕЛЬ ДУШ", "РУНА РАЗРУШЕНИЯ", "ГРАНЬ БОГОУБИЙЦЫ"]
+const UPGRADE_DESC := ["Больше силы с каждого удара", "Получай энергию в простое", "Увеличивает всё производство", "Больше урона боссам"]
 const UPGRADE_BASE_COST := [25.0, 80.0, 180.0, 320.0]
-const BOSS_NAMES := ["THE HOLLOW TITAN", "THE ASHEN WYRM", "THE VEIL QUEEN", "THE IRON SAINT"]
+const BOSS_NAMES := ["ПОЛЫЙ ТИТАН", "ПЕПЕЛЬНЫЙ ЗМЕЙ", "КОРОЛЕВА ПЕЛЕНЫ", "ЖЕЛЕЗНЫЙ СВЯТОЙ"]
 const UPGRADE_GLYPHS := ["⚒", "◉", "ᚱ", "✦"]
 
 var rng := RandomNumberGenerator.new()
@@ -96,7 +96,7 @@ func _process(delta: float) -> void:
 	if ad_boost_time > 0.0:
 		ad_boost_time = maxf(0.0, ad_boost_time - delta)
 		if boost_button != null and is_instance_valid(boost_button):
-			boost_button.text = "AD BONUS x2  %02d s" % int(ceil(ad_boost_time)) if ad_boost_time > 0.0 else "REWARDED AD x2  (DEMO)"
+			boost_button.text = "БОНУС x2  %02d с" % int(ceil(ad_boost_time)) if ad_boost_time > 0.0 else "БОНУС x2  (ДЕМО)"
 	if autosave_clock >= 15.0:
 		autosave_clock = 0.0
 		_save_game()
@@ -328,9 +328,9 @@ func _show_splash() -> void:
 	logo.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var title := _label("CLICKER: GODFORGE", Vector2(0, 190), Vector2(1280, 76), 42, Color("#f6e4c4"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var subtitle := _label("FORGE POWER  •  BREAK THE GODS", Vector2(0, 265), Vector2(1280, 34), 16, Color("#c17a55"))
+	var subtitle := _label("КУЙ СИЛУ  •  СОКРУШАЙ БОГОВ", Vector2(0, 265), Vector2(1280, 34), 16, Color("#c17a55"))
 	subtitle.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var loading := _label("AWAKENING THE ANCIENT CORE...", Vector2(0, 535), Vector2(1280, 28), 13, Color("#9c8b8a"))
+	var loading := _label("ПРОБУЖДЕНИЕ ДРЕВНЕГО ЯДРА...", Vector2(0, 535), Vector2(1280, 28), 13, Color("#9c8b8a"))
 	loading.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var bar := ProgressBar.new()
 	bar.position = Vector2(490, 575)
@@ -359,18 +359,18 @@ func _show_splash() -> void:
 
 func _show_title() -> void:
 	_clear_ui()
-	var eyebrow := _label("AN ANCIENT POWER STIRS", Vector2(0, 110), Vector2(1280, 28), 13, Color("#d58b4c"))
+	var eyebrow := _label("ДРЕВНЯЯ СИЛА ПРОБУЖДАЕТСЯ", Vector2(0, 110), Vector2(1280, 28), 13, Color("#d58b4c"))
 	eyebrow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var title := _label("CLICKER: GODFORGE", Vector2(0, 155), Vector2(1280, 72), 40, Color("#f6e4c4"))
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var sub := _label("Every strike feeds the fire. Every fire breaks a world.", Vector2(0, 230), Vector2(1280, 34), 17, Color("#c5a69a"))
+	var sub := _label("Каждый удар разжигает пламя. Каждое пламя рушит миры.", Vector2(0, 230), Vector2(1280, 34), 17, Color("#c5a69a"))
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var note := _label("DARK FANTASY  •  IDLE PROGRESSION  •  TITAN BOSSES", Vector2(0, 475), Vector2(1280, 30), 13, Color("#b36d4b"))
+	var note := _label("ТЁМНОЕ ФЭНТЕЗИ  •  РАЗВИТИЕ В ПРОСТОЕ  •  БОССЫ-ТИТАНЫ", Vector2(0, 475), Vector2(1280, 30), 13, Color("#b36d4b"))
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var begin := _button("BEGIN ASCENSION", Vector2(465, 535), Vector2(350, 66), true)
 	begin.add_theme_font_size_override("font_size", 20)
 	begin.pressed.connect(_start_game)
-	var hint := _label("TAP THE CORE  •  BUILD YOUR FORGE  •  SLAY THE TITANS", Vector2(0, 620), Vector2(1280, 24), 11, Color("#786b75"))
+	var hint := _label("БЕЙ ПО ЯДРУ  •  УЛУЧШАЙ КУЗНЮ  •  ПОБЕЖДАЙ ТИТАНОВ", Vector2(0, 620), Vector2(1280, 24), 11, Color("#786b75"))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _start_game() -> void:
@@ -382,16 +382,16 @@ func _build_game_ui() -> void:
 	_clear_ui()
 	var logo := _label("✦  GODFORGE", Vector2(32, 18), Vector2(300, 44), 24, Color("#f2d6ac"))
 	_label("THE ASHEN SANCTUM  /  WORLD %02d" % boss_stage, Vector2(34, 61), Vector2(380, 22), 11, Color("#a97b66"))
-	ui_labels["energy"] = _label("ENERGY  0", Vector2(820, 22), Vector2(210, 34), 20, Color("#f5c16e"))
-	ui_labels["rate"] = _label("0 / SEC", Vector2(820, 55), Vector2(190, 22), 12, Color("#c08b65"))
-	ui_labels["stage"] = _label("REALM  01", Vector2(1050, 22), Vector2(190, 28), 17, Color("#f1dfc5"))
-	ui_labels["shards"] = _label("GODSHARDS  0", Vector2(1050, 53), Vector2(190, 22), 11, Color("#a99ce2"))
+	ui_labels["energy"] = _label("ЭНЕРГИЯ  0", Vector2(820, 22), Vector2(210, 34), 20, Color("#f5c16e"))
+	ui_labels["rate"] = _label("0 / СЕК", Vector2(820, 55), Vector2(190, 22), 12, Color("#c08b65"))
+	ui_labels["stage"] = _label("МИР  01", Vector2(1050, 22), Vector2(190, 28), 17, Color("#f1dfc5"))
+	ui_labels["shards"] = _label("ОСКОЛКИ БОГА  0", Vector2(1050, 53), Vector2(190, 22), 11, Color("#a99ce2"))
 	_panel(Vector2(30, 118), Vector2(255, 340))
-	_label("FORGE STATUS", Vector2(52, 136), Vector2(210, 26), 16, Color("#e7c9a5"))
-	ui_labels["power"] = _label("STRIKE POWER\n1", Vector2(52, 180), Vector2(210, 52), 18, Color("#f2b75d"))
-	ui_labels["crit"] = _label("CRITICAL CHANCE\n5%", Vector2(52, 250), Vector2(210, 48), 14, Color("#d98a69"))
-	ui_labels["dps"] = _label("IDLE OUTPUT\n0 / sec", Vector2(52, 316), Vector2(210, 48), 14, Color("#c7a7a0"))
-	_label("THE CORE RESPONDS TO EVERY STRIKE", Vector2(310, 118), Vector2(660, 24), 12, Color("#b98a72")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label("СОСТОЯНИЕ КУЗНИ", Vector2(52, 136), Vector2(210, 26), 16, Color("#e7c9a5"))
+	ui_labels["power"] = _label("СИЛА УДАРА\n1", Vector2(52, 180), Vector2(210, 52), 18, Color("#f2b75d"))
+	ui_labels["crit"] = _label("ШАНС КРИТА\n5%", Vector2(52, 250), Vector2(210, 48), 14, Color("#d98a69"))
+	ui_labels["dps"] = _label("ДОХОД В ПРОСТОЕ\n0 / сек", Vector2(52, 316), Vector2(210, 48), 14, Color("#c7a7a0"))
+	_label("ЯДРО ОТЗЫВАЕТСЯ НА КАЖДЫЙ УДАР", Vector2(310, 118), Vector2(660, 24), 12, Color("#b98a72")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	core_button = _button("", Vector2(505, 215), Vector2(270, 220), false)
 	var core_normal := StyleBoxFlat.new()
 	core_normal.bg_color = Color(0, 0, 0, 0)
@@ -405,10 +405,10 @@ func _build_game_ui() -> void:
 	core_button.add_theme_stylebox_override("hover", core_hover)
 	core_button.add_theme_stylebox_override("pressed", core_pressed)
 	core_button.pressed.connect(_strike_core)
-	ui_labels["hit"] = _label("TAP TO STRIKE", Vector2(510, 420), Vector2(260, 25), 12, Color("#d58b4c"))
+	ui_labels["hit"] = _label("КОСНИСЬ, ЧТОБЫ УДАРИТЬ", Vector2(510, 420), Vector2(260, 25), 12, Color("#d58b4c"))
 	ui_labels["hit"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_panel(Vector2(945, 118), Vector2(305, 340))
-	_label("REALM GATEKEEPER", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
+	_label("СТРАЖ ВРАТ МИРА", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
 	ui_labels["boss"] = _label(_boss_name(boss_stage), Vector2(968, 168), Vector2(250, 24), 13, Color("#f0d9c2"))
 	boss_bar = ProgressBar.new()
 	boss_bar.position = Vector2(968, 208)
@@ -441,18 +441,18 @@ func _build_game_ui() -> void:
 		hp_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(hp_marker)
 	ui_labels["boss_hp"] = _label("500 / 500 HP", Vector2(968, 232), Vector2(255, 22), 12, Color("#d8b9a8"))
-	ui_labels["boss_threat"] = _label("THREAT: STABLE", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
+	ui_labels["boss_threat"] = _label("УГРОЗА: НИЗКАЯ", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
 	ui_labels["boss_threat"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	ui_labels["boss_hint"] = _label("Break the Titan to claim\na Godshard.", Vector2(968, 277), Vector2(255, 48), 13, Color("#aa8b87"))
-	boost_button = _button("REWARDED AD x2  (DEMO)", Vector2(968, 365), Vector2(255, 52), true)
+	ui_labels["boss_hint"] = _label("Сокруши титана, чтобы получить\nосколок бога.", Vector2(968, 277), Vector2(255, 48), 13, Color("#aa8b87"))
+	boost_button = _button("БОНУС x2  (ДЕМО)", Vector2(968, 365), Vector2(255, 52), true)
 	boost_button.add_theme_font_size_override("font_size", 13)
 	boost_button.pressed.connect(_activate_ad_demo)
-	_label("BONUS SIMULATION — NO AD SDK YET", Vector2(968, 423), Vector2(255, 20), 9, Color("#8c777b"))
-	_label("FORGE UPGRADES", Vector2(32, 486), Vector2(300, 25), 16, Color("#e7c9a5"))
+	_label("ИМИТАЦИЯ БОНУСА — РЕКЛАМЫ ПОКА НЕТ", Vector2(968, 423), Vector2(255, 20), 9, Color("#8c777b"))
+	_label("УЛУЧШЕНИЯ КУЗНИ", Vector2(32, 486), Vector2(300, 25), 16, Color("#e7c9a5"))
 	var card_x := [32.0, 340.0, 648.0, 956.0]
 	for i in range(4):
 		_build_upgrade_card(i, Vector2(card_x[i], 520))
-	_label("CLICK  •  COLLECT  •  ASCEND", Vector2(0, 690), Vector2(1280, 20), 10, Color("#77646b")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_label("ЖМИ  •  СОБИРАЙ  •  ВОСХОДИ", Vector2(0, 690), Vector2(1280, 20), 10, Color("#77646b")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 
 func _build_upgrade_card(index: int, pos: Vector2) -> void:
@@ -500,16 +500,16 @@ func _build_upgrade_card(index: int, pos: Vector2) -> void:
 	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_desc_%d" % index] = desc
 
-	var level_label := _label("LEVEL  00", pos + Vector2(16, 98), Vector2(92, 20), 11, Color("#e5c8a2"))
+	var level_label := _label("УРОВЕНЬ  00", pos + Vector2(16, 98), Vector2(92, 20), 11, Color("#e5c8a2"))
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_level_%d" % index] = level_label
 
-	var state_label := _label("READY TO FORGE", pos + Vector2(104, 98), Vector2(172, 20), 9, Color("#f2bb70"))
+	var state_label := _label("ГОТОВО К КОВКЕ", pos + Vector2(104, 98), Vector2(172, 20), 9, Color("#f2bb70"))
 	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_state_%d" % index] = state_label
 
-	var cost_label := _label("✦  25 ENERGY", pos + Vector2(16, 122), Vector2(258, 22), 13, Color("#f3bd70"))
+	var cost_label := _label("✦  25 ЭНЕРГИИ", pos + Vector2(16, 122), Vector2(258, 22), 13, Color("#f3bd70"))
 	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_cost_%d" % index] = cost_label
 
@@ -532,10 +532,10 @@ func _strike_core() -> void:
 	boss_hp -= boss_hit_damage
 	boss_hit_flash = 1.0
 	boss_shake = 1.0
-	combat_popups.append({"text": ("CRITICAL  -" if critical else "-") + _format_number(boss_hit_damage), "position": Vector2(862.0 + rng.randf_range(-24.0, 24.0), 286.0), "life": 1.0, "size": 23 if critical else 18, "color": Color("#ffe28b") if critical else Color("#ff8c72")})
-	combat_popups.append({"text": "+" + _format_number(damage) + " ENERGY", "position": Vector2(640.0 + rng.randf_range(-20.0, 20.0), 284.0), "life": 0.82, "size": 15, "color": Color("#ffc879")})
+	combat_popups.append({"text": ("КРИТ!  −" if critical else "−") + _format_number(boss_hit_damage), "position": Vector2(862.0 + rng.randf_range(-24.0, 24.0), 286.0), "life": 1.0, "size": 23 if critical else 18, "color": Color("#ffe28b") if critical else Color("#ff8c72")})
+	combat_popups.append({"text": "+" + _format_number(damage) + " ЭНЕРГИИ", "position": Vector2(640.0 + rng.randf_range(-20.0, 20.0), 284.0), "life": 0.82, "size": 15, "color": Color("#ffc879")})
 	if ui_labels.has("hit"):
-		ui_labels["hit"].text = ("CRITICAL HIT!  +" if critical else "CORE STRUCK  +") + _format_number(damage)
+		ui_labels["hit"].text = ("КРИТИЧЕСКИЙ УДАР!  +" if critical else "УДАР ПО ЯДРУ  +") + _format_number(damage)
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
 	if boss_hp <= 0.0:
 		boss_stage += 1
@@ -547,16 +547,16 @@ func _strike_core() -> void:
 		critical_flash = 0.0
 		boss_hit_flash = 0.0
 		boss_shake = 0.0
-		combat_popups.append({"text": "GATEKEEPER SHATTERED", "position": Vector2(862.0, 230.0), "life": 1.35, "size": 20, "color": Color("#ffe6a0")})
+		combat_popups.append({"text": "СТРАЖ СОКРУШЁН", "position": Vector2(862.0, 230.0), "life": 1.35, "size": 20, "color": Color("#ffe6a0")})
 		if ui_labels.has("boss_hint"):
-			ui_labels["boss_hint"].text = "GATEKEEPER SLAIN!\n+1 GODSHARD  •  POWER +8%"
+			ui_labels["boss_hint"].text = "СТРАЖ ПОВЕРЖЕН!\n+1 ОСКОЛОК БОГА  •  СИЛА +8%"
 	_refresh_ui()
 
 func _buy_upgrade(index: int) -> void:
 	var cost := _upgrade_cost(index)
 	if energy < cost:
 		if ui_labels.has("power"):
-			ui_labels["power"].text = "NOT ENOUGH ENERGY"
+			ui_labels["power"].text = "НЕДОСТАТОЧНО ЭНЕРГИИ"
 		return
 	energy -= cost
 	upgrade_levels[index] += 1
@@ -583,32 +583,32 @@ func _activate_ad_demo() -> void:
 	ad_boost_time = 60.0
 	energy += 50.0 * multiplier
 	if boost_button != null:
-		boost_button.text = "AD BONUS x2  60 s"
+		boost_button.text = "БОНУС x2  60 с"
 	_refresh_ui()
 
 func _refresh_ui() -> void:
 	if not playing:
 		return
 	if ui_labels.has("energy"):
-		ui_labels["energy"].text = "ENERGY  " + _format_number(energy)
-		ui_labels["rate"].text = _format_number(idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)) + " / SEC"
-		ui_labels["stage"].text = "REALM  %02d" % boss_stage
-		ui_labels["shards"].text = "GODSHARDS  %d" % (boss_stage - 1)
-		ui_labels["power"].text = "STRIKE POWER\n" + _format_number(click_power * multiplier)
-		ui_labels["crit"].text = "CRITICAL CHANCE\n8%  •  x5 DAMAGE"
-		ui_labels["dps"].text = "IDLE OUTPUT\n" + _format_number(idle_rate * multiplier) + " / sec"
+		ui_labels["energy"].text = "ЭНЕРГИЯ  " + _format_number(energy)
+		ui_labels["rate"].text = _format_number(idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)) + " / СЕК"
+		ui_labels["stage"].text = "МИР  %02d" % boss_stage
+		ui_labels["shards"].text = "ОСКОЛКИ БОГА  %d" % (boss_stage - 1)
+		ui_labels["power"].text = "СИЛА УДАРА\n" + _format_number(click_power * multiplier)
+		ui_labels["crit"].text = "ШАНС КРИТА\n8%  •  УРОН x5"
+		ui_labels["dps"].text = "ДОХОД В ПРОСТОЕ\n" + _format_number(idle_rate * multiplier) + " / сек"
 		ui_labels["boss"].text = _boss_name(boss_stage) + "  •  %02d" % boss_stage
 		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " HP"
 		var hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
 		var threat_label: Label = ui_labels["boss_threat"]
 		if hp_ratio <= 0.2:
-			threat_label.text = "THREAT: CRITICAL"
+			threat_label.text = "УГРОЗА: КРИТИЧЕСКАЯ"
 			threat_label.add_theme_color_override("font_color", Color("#ff715c"))
 		elif hp_ratio <= 0.5:
-			threat_label.text = "THREAT: ELEVATED"
+			threat_label.text = "УГРОЗА: ПОВЫШЕННАЯ"
 			threat_label.add_theme_color_override("font_color", Color("#e6a45d"))
 		else:
-			threat_label.text = "THREAT: STABLE"
+			threat_label.text = "УГРОЗА: НИЗКАЯ"
 			threat_label.add_theme_color_override("font_color", Color("#d5a77a"))
 		var fill_style: StyleBoxFlat = ui_labels["boss_fill_style"]
 		fill_style.bg_color = Color("#ff573f") if hp_ratio <= 0.2 else (Color("#d47746") if hp_ratio <= 0.5 else Color("#c44738"))
@@ -626,22 +626,22 @@ func _refresh_ui() -> void:
 		var accent: ColorRect = ui_labels["upgrade_accent_%d" % i]
 		card.disabled = not can_afford
 		card.modulate = Color.WHITE
-		level_label.text = "LEVEL  %02d" % level
-		cost_label.text = "✦  %s ENERGY" % _format_number(cost)
+		level_label.text = "УРОВЕНЬ  %02d" % level
+		cost_label.text = "✦  %s ЭНЕРГИИ" % _format_number(cost)
 		if upgrade_feedback_time[i] > 0.0:
-			state_label.text = "FORGED!  +1 LEVEL"
+			state_label.text = "УЛУЧШЕНО!  +1 УРОВЕНЬ"
 			state_label.add_theme_color_override("font_color", Color("#ffe6a0"))
 		elif can_afford and level == 0:
-			state_label.text = "READY TO FORGE"
+			state_label.text = "ГОТОВО К КОВКЕ"
 			state_label.add_theme_color_override("font_color", Color("#f2bb70"))
 		elif can_afford:
-			state_label.text = "UPGRADE READY"
+			state_label.text = "МОЖНО УЛУЧШИТЬ"
 			state_label.add_theme_color_override("font_color", Color("#e5b56f"))
 		elif level > 0:
-			state_label.text = "FORGED • NEED ENERGY"
+			state_label.text = "УЛУЧШЕНО • НУЖНА ЭНЕРГИЯ"
 			state_label.add_theme_color_override("font_color", Color("#a88a83"))
 		else:
-			state_label.text = "NEED ENERGY"
+			state_label.text = "НУЖНА ЭНЕРГИЯ"
 			state_label.add_theme_color_override("font_color", Color("#907b82"))
 		accent.color = Color("#e6a45d") if can_afford else Color("#513541")
 		var normal := StyleBoxFlat.new()
@@ -672,13 +672,13 @@ func _refresh_ui() -> void:
 
 func _format_number(value: float) -> String:
 	if value >= 1.0e12:
-		return "%.2fT" % (value / 1.0e12)
+		return "%.2f трлн" % (value / 1.0e12)
 	if value >= 1.0e9:
-		return "%.2fB" % (value / 1.0e9)
+		return "%.2f млрд" % (value / 1.0e9)
 	if value >= 1.0e6:
-		return "%.2fM" % (value / 1.0e6)
+		return "%.2f млн" % (value / 1.0e6)
 	if value >= 1.0e3:
-		return "%.2fK" % (value / 1.0e3)
+		return "%.2f тыс." % (value / 1.0e3)
 	return str(int(value))
 
 func _panel(pos: Vector2, size: Vector2) -> Panel:
