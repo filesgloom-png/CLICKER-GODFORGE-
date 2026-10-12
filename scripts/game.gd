@@ -40,6 +40,10 @@ var journal_button: Button
 var journal_overlay: Control
 var total_clicks := 0
 var total_upgrades := 0
+var boss_victories := 0
+var last_boss_reward := 0.0
+var victory_banner_time := 0.0
+var victory_banner_text := ""
 
 func _ready() -> void:
 	rng.randomize()
@@ -58,6 +62,7 @@ func _process(delta: float) -> void:
 	core_recoil = move_toward(core_recoil, 0.0, delta * 4.5)
 	critical_flash = maxf(0.0, critical_flash - delta * 2.2)
 	boss_transition_flash = maxf(0.0, boss_transition_flash - delta * 1.35)
+	victory_banner_time = maxf(0.0, victory_banner_time - delta)
 	boss_hit_flash = maxf(0.0, boss_hit_flash - delta * 3.2)
 	boss_shake = move_toward(boss_shake, 0.0, delta * 4.8)
 	if boss_bar != null and is_instance_valid(boss_bar):
@@ -176,6 +181,13 @@ func _draw() -> void:
 			var crit_outer: Vector2 = center + Vector2(cos(crit_angle), sin(crit_angle)) * 205.0
 			draw_line(crit_inner, crit_outer, Color(1.0, 0.76, 0.31, crit_alpha * 0.85), 3.0, true)
 	# Realm transition blooms through the ruined sanctum when a boss falls.
+	if victory_banner_time > 0.0:
+		var banner_alpha: float = clampf(victory_banner_time / 1.4, 0.0, 1.0)
+		var banner_rect := Rect2(Vector2(365, 80), Vector2(550, 72))
+		draw_rect(banner_rect, Color(0.035, 0.012, 0.018, 0.9 * banner_alpha), true)
+		draw_rect(banner_rect, Color(0.88, 0.49, 0.24, 0.9 * banner_alpha), false, 2.0)
+		draw_string(ThemeDB.fallback_font, Vector2(0, 122), victory_banner_text, HORIZONTAL_ALIGNMENT_CENTER, 1280, 22, Color(1.0, 0.82, 0.53, banner_alpha))
+		draw_string(ThemeDB.fallback_font, Vector2(0, 144), "НАГРАДА ЗА ПОБЕДУ  •  СЛЕДУЮЩИЙ СТРАЖ СТАЛ СИЛЬНЕЕ", HORIZONTAL_ALIGNMENT_CENTER, 1280, 10, Color(0.84, 0.64, 0.54, banner_alpha))
 	if boss_transition_flash > 0.0:
 		draw_rect(Rect2(Vector2.ZERO, size), Color(1.0, 0.48, 0.18, boss_transition_flash * 0.24))
 	# Deep vignette and forged horizon.
@@ -679,8 +691,12 @@ func _strike_core() -> void:
 		ui_labels["hit"].text = ("КРИТИЧЕСКИЙ УДАР!  +" if critical else "УДАР ПО ЯДРУ  +") + _format_number(damage)
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
 	if boss_hp <= 0.0:
+		boss_victories += 1
 		boss_stage += 1
-		energy += 250.0 * boss_stage
+		last_boss_reward = 250.0 * boss_stage
+		energy += last_boss_reward
+		victory_banner_time = 2.2
+		victory_banner_text = "СТРАЖ СОКРУШЁН  •  +%s ЭНЕРГИИ" % _format_number(last_boss_reward)
 		boss_max_hp *= 1.72
 		boss_hp = boss_max_hp
 		multiplier *= 1.08
@@ -689,6 +705,7 @@ func _strike_core() -> void:
 		boss_hit_flash = 0.0
 		boss_shake = 0.0
 		combat_popups.append({"text": "СТРАЖ СОКРУШЁН", "position": Vector2(862.0, 230.0), "life": 1.35, "size": 20, "color": Color("#ffe6a0")})
+		combat_popups.append({"text": "+%s ЭНЕРГИИ" % _format_number(last_boss_reward), "position": Vector2(640.0, 200.0), "life": 1.7, "size": 17, "color": Color("#f5c16e")})
 		if ui_labels.has("boss_hint"):
 			ui_labels["boss_hint"].text = "СТРАЖ ПОВЕРЖЕН!\n+1 ОСКОЛОК БОГА  •  СИЛА +8%"
 	_refresh_ui()
@@ -928,6 +945,7 @@ func _save_game() -> void:
 	cfg.set_value("progress", "upgrade_levels", upgrade_levels)
 	cfg.set_value("progress", "total_clicks", total_clicks)
 	cfg.set_value("progress", "total_upgrades", total_upgrades)
+	cfg.set_value("progress", "boss_victories", boss_victories)
 	cfg.set_value("progress", "last_time", int(Time.get_unix_time_from_system()))
 	cfg.save(SAVE_PATH)
 
@@ -946,6 +964,7 @@ func _load_game() -> void:
 	upgrade_levels = cfg.get_value("progress", "upgrade_levels", [0, 0, 0, 0])
 	total_clicks = int(cfg.get_value("progress", "total_clicks", 0))
 	total_upgrades = int(cfg.get_value("progress", "total_upgrades", 0))
+	boss_victories = int(cfg.get_value("progress", "boss_victories", maxi(boss_stage - 1, 0)))
 	var last_time := int(cfg.get_value("progress", "last_time", int(Time.get_unix_time_from_system())))
 	var elapsed := clampf(float(Time.get_unix_time_from_system() - last_time), 0.0, 28800.0)
 	energy += idle_rate * multiplier * elapsed * 0.5
