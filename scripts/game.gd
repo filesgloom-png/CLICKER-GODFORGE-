@@ -367,7 +367,7 @@ func _show_title() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var note := _label("ТЁМНОЕ ФЭНТЕЗИ  •  РАЗВИТИЕ В ПРОСТОЕ  •  БОССЫ-ТИТАНЫ", Vector2(0, 475), Vector2(1280, 30), 13, Color("#b36d4b"))
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var begin := _button("BEGIN ASCENSION", Vector2(465, 535), Vector2(350, 66), true)
+	var begin := _button("НАЧАТЬ ВОСХОЖДЕНИЕ", Vector2(465, 535), Vector2(350, 66), true)
 	begin.add_theme_font_size_override("font_size", 20)
 	begin.pressed.connect(_start_game)
 	var hint := _label("БЕЙ ПО ЯДРУ  •  УЛУЧШАЙ КУЗНЮ  •  ПОБЕЖДАЙ ТИТАНОВ", Vector2(0, 620), Vector2(1280, 24), 11, Color("#786b75"))
@@ -380,8 +380,8 @@ func _start_game() -> void:
 
 func _build_game_ui() -> void:
 	_clear_ui()
-	var logo := _label("✦  GODFORGE", Vector2(32, 18), Vector2(300, 44), 24, Color("#f2d6ac"))
-	_label("THE ASHEN SANCTUM  /  WORLD %02d" % boss_stage, Vector2(34, 61), Vector2(380, 22), 11, Color("#a97b66"))
+	var logo := _label("✦  КУЗНЯ БОГОВ", Vector2(32, 18), Vector2(300, 44), 24, Color("#f2d6ac"))
+	_label("ПЕПЕЛЬНОЕ СВЯТИЛИЩЕ  /  МИР %02d" % boss_stage, Vector2(34, 61), Vector2(380, 22), 11, Color("#a97b66"))
 	ui_labels["energy"] = _label("ЭНЕРГИЯ  0", Vector2(820, 22), Vector2(210, 34), 20, Color("#f5c16e"))
 	ui_labels["rate"] = _label("0 / СЕК", Vector2(820, 55), Vector2(190, 22), 12, Color("#c08b65"))
 	ui_labels["stage"] = _label("МИР  01", Vector2(1050, 22), Vector2(190, 28), 17, Color("#f1dfc5"))
@@ -440,7 +440,7 @@ func _build_game_ui() -> void:
 		hp_marker.color = Color("#512832")
 		hp_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(hp_marker)
-	ui_labels["boss_hp"] = _label("500 / 500 HP", Vector2(968, 232), Vector2(255, 22), 12, Color("#d8b9a8"))
+	ui_labels["boss_hp"] = _label("500 / 500 ОЗ", Vector2(968, 232), Vector2(255, 22), 12, Color("#d8b9a8"))
 	ui_labels["boss_threat"] = _label("УГРОЗА: НИЗКАЯ", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
 	ui_labels["boss_threat"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	ui_labels["boss_hint"] = _label("Сокруши титана, чтобы получить\nосколок бога.", Vector2(968, 277), Vector2(255, 48), 13, Color("#aa8b87"))
@@ -598,7 +598,7 @@ func _refresh_ui() -> void:
 		ui_labels["crit"].text = "ШАНС КРИТА\n8%  •  УРОН x5"
 		ui_labels["dps"].text = "ДОХОД В ПРОСТОЕ\n" + _format_number(idle_rate * multiplier) + " / сек"
 		ui_labels["boss"].text = _boss_name(boss_stage) + "  •  %02d" % boss_stage
-		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " HP"
+		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " ОЗ"
 		var hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
 		var threat_label: Label = ui_labels["boss_threat"]
 		if hp_ratio <= 0.2:
