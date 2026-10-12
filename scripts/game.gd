@@ -83,7 +83,7 @@ func _draw() -> void:
 		draw_rect(Rect2(0, y, size.x, 3), Color(0.15, 0.045, 0.065, 0.018 + t * 0.025))
 	# Distant ruined cathedral ribs and stained-glass glow.
 	for side in [-1.0, 1.0]:
-		var x := size.x * (0.5 + side * 0.31)
+		var x: float = size.x * (0.5 + float(side) * 0.31)
 		draw_line(Vector2(x, 0), Vector2(x + side * 58.0, size.y * 0.34), Color(0.35, 0.15, 0.17, 0.18), 3.0, true)
 		draw_line(Vector2(x + side * 58.0, size.y * 0.34), Vector2(x + side * 90.0, size.y * 0.78), Color(0.55, 0.22, 0.16, 0.12), 2.0, true)
 		draw_arc(Vector2(x, size.y * 0.34), 95.0, PI if side < 0.0 else 0.0, TAU if side < 0.0 else PI, 48, Color(0.55, 0.24, 0.19, 0.13), 2.0, true)
