@@ -87,6 +87,7 @@ func _draw() -> void:
 	for y in range(0, int(size.y), 3):
 		var t := float(y) / maxf(size.y, 1.0)
 		draw_rect(Rect2(0, y, size.x, 3), Color(0.15, 0.045, 0.065, 0.018 + t * 0.025))
+	_draw_sanctum_architecture(size)
 	# Distant ruined cathedral ribs and stained-glass glow.
 	for side in [-1.0, 1.0]:
 		var x: float = size.x * (0.5 + float(side) * 0.31)
@@ -152,6 +153,45 @@ func _draw() -> void:
 	for i in range(6):
 		var inset := float(i) * 7.0
 		draw_rect(Rect2(inset, inset, size.x - inset * 2.0, size.y - inset * 2.0), Color(0.22, 0.08, 0.1, 0.045), false, 1.0)
+
+func _draw_sanctum_architecture(size: Vector2) -> void:
+	# Tall broken pillars and narrow stained-glass windows frame the forge without covering the HUD.
+	for side in [-1.0, 1.0]:
+		var pillar_x: float = size.x * (0.5 + side * 0.405)
+		var pillar_color := Color(0.075, 0.045, 0.06, 0.9)
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(pillar_x - 16.0, 0.0), Vector2(pillar_x + 16.0, 0.0),
+			Vector2(pillar_x + 10.0, size.y * 0.72), Vector2(pillar_x - 11.0, size.y * 0.72)
+		]), pillar_color)
+		draw_line(Vector2(pillar_x - 11.0, 0.0), Vector2(pillar_x - 8.0, size.y * 0.72), Color(0.58, 0.27, 0.2, 0.22), 2.0, true)
+		draw_line(Vector2(pillar_x + 12.0, 0.0), Vector2(pillar_x + 9.0, size.y * 0.72), Color(0.22, 0.13, 0.16, 0.7), 3.0, true)
+		var glass_x: float = size.x * (0.5 + side * 0.265)
+		var glass_alpha: float = 0.035 + 0.018 * absf(sin(pulse * 0.55 + side))
+		draw_colored_polygon(PackedVector2Array([
+			Vector2(glass_x, 32.0), Vector2(glass_x + side * 35.0, 74.0),
+			Vector2(glass_x + side * 27.0, size.y * 0.32), Vector2(glass_x, size.y * 0.39),
+			Vector2(glass_x - side * 27.0, size.y * 0.32), Vector2(glass_x - side * 35.0, 74.0)
+		]), Color(0.5, 0.12, 0.16, glass_alpha))
+		draw_line(Vector2(glass_x, 42.0), Vector2(glass_x, size.y * 0.36), Color(0.82, 0.39, 0.24, 0.13), 1.5, true)
+		draw_line(Vector2(glass_x - 24.0, size.y * 0.2), Vector2(glass_x + 24.0, size.y * 0.2), Color(0.82, 0.39, 0.24, 0.1), 1.0, true)
+	# Perspective seams and a rune-etched dais ground the core in a physical chamber.
+	var horizon_y: float = size.y * 0.68
+	for i in range(9):
+		var floor_x: float = size.x * float(i) / 8.0
+		draw_line(Vector2(size.x * 0.5, horizon_y), Vector2(floor_x, size.y), Color(0.42, 0.2, 0.17, 0.085), 1.0, true)
+	for i in range(5):
+		var depth: float = float(i) / 4.0
+		var floor_y: float = lerpf(horizon_y, size.y, depth * depth)
+		draw_line(Vector2(0.0, floor_y), Vector2(size.x, floor_y), Color(0.42, 0.2, 0.17, 0.07 + depth * 0.035), 1.0, true)
+	var dais_center := Vector2(size.x * 0.5, size.y * 0.79)
+	for i in range(4):
+		var radius: float = 68.0 + float(i) * 21.0
+		draw_arc(dais_center, radius, PI * 1.08, PI * 1.92, 64, Color(0.76, 0.34, 0.19, 0.17 - float(i) * 0.025), 1.5, true)
+	for i in range(13):
+		var a: float = PI * 1.08 + PI * 0.84 * float(i) / 12.0
+		var inner := dais_center + Vector2(cos(a), sin(a)) * 74.0
+		var outer := dais_center + Vector2(cos(a), sin(a)) * 128.0
+		draw_line(inner, outer, Color(0.86, 0.43, 0.22, 0.19), 1.2, true)
 
 func _draw_boss_portrait(center: Vector2, stage: int) -> void:
 	var bob: float = sin(pulse * 1.35 + float(stage)) * 4.0
@@ -318,6 +358,28 @@ func _build_game_ui() -> void:
 	for i in range(4):
 		var index := i
 		var card := _button("", Vector2(card_x[i], 520), Vector2(290, 154), false)
+		var card_normal := StyleBoxFlat.new()
+		card_normal.bg_color = Color("#171019")
+		card_normal.border_color = Color("#694032")
+		card_normal.set_border_width_all(1)
+		card_normal.set_corner_radius_all(12)
+		card_normal.shadow_color = Color(0.0, 0.0, 0.0, 0.48)
+		card_normal.shadow_size = 9
+		card_normal.content_margin_left = 14
+		card_normal.content_margin_right = 14
+		card_normal.content_margin_top = 12
+		card_normal.content_margin_bottom = 12
+		var card_hover := card_normal.duplicate() as StyleBoxFlat
+		card_hover.bg_color = Color("#28151c")
+		card_hover.border_color = Color("#e2a45b")
+		card_hover.set_border_width_all(2)
+		var card_pressed := card_normal.duplicate() as StyleBoxFlat
+		card_pressed.bg_color = Color("#0d0910")
+		card_pressed.border_color = Color("#a84d35")
+		card.add_theme_stylebox_override("normal", card_normal)
+		card.add_theme_stylebox_override("hover", card_hover)
+		card.add_theme_stylebox_override("pressed", card_pressed)
+		card.add_theme_stylebox_override("disabled", card_normal)
 		card.add_theme_font_size_override("font_size", 14)
 		card.add_theme_color_override("font_color", Color("#f4dfc5"))
 		card.add_theme_color_override("font_hover_color", Color("#fff0c9"))
@@ -426,12 +488,12 @@ func _panel(pos: Vector2, size: Vector2) -> Panel:
 	panel.position = pos
 	panel.size = size
 	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.045, 0.028, 0.05, 0.78)
-	style.border_color = Color(0.62, 0.29, 0.18, 0.86)
+	style.bg_color = Color(0.035, 0.022, 0.042, 0.91)
+	style.border_color = Color(0.62, 0.29, 0.18, 0.92)
 	style.set_border_width_all(1)
 	style.set_corner_radius_all(10)
-	style.shadow_color = Color(0, 0, 0, 0.42)
-	style.shadow_size = 12
+	style.shadow_color = Color(0, 0, 0, 0.55)
+	style.shadow_size = 14
 	panel.add_theme_stylebox_override("panel", style)
 	add_child(panel)
 	return panel
@@ -458,8 +520,10 @@ func _button(text_value: String, pos: Vector2, size: Vector2, gold: bool) -> But
 	var hover := normal.duplicate() as StyleBoxFlat
 	hover.bg_color = Color("#6b3825") if gold else Color("#281721")
 	hover.border_color = Color("#ffd080")
+	hover.set_border_width_all(2)
 	var pressed := normal.duplicate() as StyleBoxFlat
 	pressed.bg_color = Color("#26131a")
+	pressed.border_color = Color("#b75a3b")
 	button.add_theme_stylebox_override("normal", normal)
 	button.add_theme_stylebox_override("hover", hover)
 	button.add_theme_stylebox_override("pressed", pressed)
