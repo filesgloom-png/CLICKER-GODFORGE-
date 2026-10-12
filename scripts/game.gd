@@ -14,6 +14,7 @@ var hit_flash := 0.0
 var core_recoil := 0.0
 var critical_flash := 0.0
 var boss_transition_flash := 0.0
+var upgrade_feedback_time := [0.0, 0.0, 0.0, 0.0]
 var ember_particles: Array[Vector4] = []
 var energy := 0.0
 var click_power := 1.0
@@ -72,6 +73,11 @@ func _process(delta: float) -> void:
 		if playing and idle_rate > 0.0:
 			energy += idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)
 			_refresh_ui()
+	for i in range(4):
+		if upgrade_feedback_time[i] > 0.0:
+			upgrade_feedback_time[i] = maxf(0.0, upgrade_feedback_time[i] - delta)
+			if upgrade_feedback_time[i] <= 0.0 and playing:
+				_refresh_ui()
 	if ad_boost_time > 0.0:
 		ad_boost_time = maxf(0.0, ad_boost_time - delta)
 		if boost_button != null and is_instance_valid(boost_button):
@@ -411,38 +417,68 @@ func _build_game_ui() -> void:
 	_label("FORGE UPGRADES", Vector2(32, 486), Vector2(300, 25), 16, Color("#e7c9a5"))
 	var card_x := [32.0, 340.0, 648.0, 956.0]
 	for i in range(4):
-		var index := i
-		var card := _button("", Vector2(card_x[i], 520), Vector2(290, 154), false)
-		var card_normal := StyleBoxFlat.new()
-		card_normal.bg_color = Color("#171019")
-		card_normal.border_color = Color("#694032")
-		card_normal.set_border_width_all(1)
-		card_normal.set_corner_radius_all(12)
-		card_normal.shadow_color = Color(0.0, 0.0, 0.0, 0.48)
-		card_normal.shadow_size = 9
-		card_normal.content_margin_left = 14
-		card_normal.content_margin_right = 14
-		card_normal.content_margin_top = 12
-		card_normal.content_margin_bottom = 12
-		var card_hover := card_normal.duplicate() as StyleBoxFlat
-		card_hover.bg_color = Color("#28151c")
-		card_hover.border_color = Color("#e2a45b")
-		card_hover.set_border_width_all(2)
-		var card_pressed := card_normal.duplicate() as StyleBoxFlat
-		card_pressed.bg_color = Color("#0d0910")
-		card_pressed.border_color = Color("#a84d35")
-		card.add_theme_stylebox_override("normal", card_normal)
-		card.add_theme_stylebox_override("hover", card_hover)
-		card.add_theme_stylebox_override("pressed", card_pressed)
-		card.add_theme_stylebox_override("disabled", card_normal)
-		card.add_theme_font_size_override("font_size", 14)
-		card.add_theme_color_override("font_color", Color("#f4dfc5"))
-		card.add_theme_color_override("font_hover_color", Color("#fff0c9"))
-		card.add_theme_color_override("font_disabled_color", Color("#8b7779"))
-		card.alignment = HORIZONTAL_ALIGNMENT_CENTER
-		card.pressed.connect(func(): _buy_upgrade(index))
-		ui_labels["upgrade_%d" % i] = card
+		_build_upgrade_card(i, Vector2(card_x[i], 520))
 	_label("CLICK  •  COLLECT  •  ASCEND", Vector2(0, 690), Vector2(1280, 20), 10, Color("#77646b")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+
+
+func _build_upgrade_card(index: int, pos: Vector2) -> void:
+	var card := _button("", pos, Vector2(290, 154), false)
+	card.pivot_offset = card.size * 0.5
+	card.add_theme_font_size_override("font_size", 12)
+	card.alignment = HORIZONTAL_ALIGNMENT_LEFT
+	card.add_theme_color_override("font_color", Color("#f4dfc5"))
+	card.add_theme_color_override("font_hover_color", Color("#fff0c9"))
+	card.add_theme_color_override("font_disabled_color", Color("#8b7779"))
+	card.pressed.connect(func(): _buy_upgrade(index))
+	ui_labels["upgrade_%d" % index] = card
+
+	var accent := ColorRect.new()
+	accent.position = pos + Vector2(12, 2)
+	accent.size = Vector2(266, 2)
+	accent.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	accent.color = Color("#e6a45d")
+	add_child(accent)
+	ui_labels["upgrade_accent_%d" % index] = accent
+
+	var medallion := Panel.new()
+	medallion.position = pos + Vector2(14, 14)
+	medallion.size = Vector2(48, 48)
+	medallion.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var medallion_style := StyleBoxFlat.new()
+	medallion_style.bg_color = Color("#120c13")
+	medallion_style.border_color = Color("#b87949")
+	medallion_style.set_border_width_all(1)
+	medallion_style.set_corner_radius_all(8)
+	medallion.add_theme_stylebox_override("panel", medallion_style)
+	add_child(medallion)
+
+	var glyph := _label(UPGRADE_GLYPHS[index], pos + Vector2(14, 12), Vector2(48, 50), 27, Color("#f1b96f"))
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_icon_%d" % index] = glyph
+
+	var title := _label(UPGRADE_NAMES[index], pos + Vector2(72, 11), Vector2(205, 24), 13, Color("#f5dfc4"))
+	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_name_%d" % index] = title
+
+	var desc := _label(UPGRADE_DESC[index], pos + Vector2(16, 66), Vector2(258, 27), 11, Color("#bda39d"))
+	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_desc_%d" % index] = desc
+
+	var level_label := _label("LEVEL  00", pos + Vector2(16, 98), Vector2(92, 20), 11, Color("#e5c8a2"))
+	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_level_%d" % index] = level_label
+
+	var state_label := _label("READY TO FORGE", pos + Vector2(104, 98), Vector2(172, 20), 9, Color("#f2bb70"))
+	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_state_%d" % index] = state_label
+
+	var cost_label := _label("✦  25 ENERGY", pos + Vector2(16, 122), Vector2(258, 22), 13, Color("#f3bd70"))
+	cost_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["upgrade_cost_%d" % index] = cost_label
+
 
 func _strike_core() -> void:
 	hit_flash = 1.0
@@ -482,6 +518,7 @@ func _buy_upgrade(index: int) -> void:
 		return
 	energy -= cost
 	upgrade_levels[index] += 1
+	upgrade_feedback_time[index] = 0.9
 	match index:
 		0:
 			click_power *= 1.55
@@ -492,6 +529,10 @@ func _buy_upgrade(index: int) -> void:
 		3:
 			boss_damage *= 1.45
 	_refresh_ui()
+	var purchased_card: Button = ui_labels["upgrade_%d" % index]
+	var feedback_tween := create_tween()
+	feedback_tween.tween_property(purchased_card, "scale", Vector2(1.045, 1.06), 0.09).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	feedback_tween.tween_property(purchased_card, "scale", Vector2.ONE, 0.16).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 
 func _upgrade_cost(index: int) -> float:
 	return UPGRADE_BASE_COST[index] * pow(1.72, upgrade_levels[index])
@@ -520,12 +561,59 @@ func _refresh_ui() -> void:
 		boss_bar.max_value = boss_max_hp
 		boss_bar.value = maxf(0.0, boss_hp)
 	for i in range(4):
-		var key := "upgrade_%d" % i
-		if ui_labels.has(key):
-			var card: Button = ui_labels[key]
-			card.text = "%s   %s\n━━━━━━━━━━━━\nLV  %02d   •   %s\n%s\n✦  COST  %s" % [UPGRADE_GLYPHS[i], UPGRADE_NAMES[i], upgrade_levels[i], "FORGED" if upgrade_levels[i] > 0 else "AVAILABLE", UPGRADE_DESC[i], _format_number(_upgrade_cost(i))]
-			card.disabled = energy < _upgrade_cost(i)
-			card.modulate = Color(1, 1, 1, 1) if not card.disabled else Color(0.65, 0.58, 0.58, 1)
+		var cost := _upgrade_cost(i)
+		var can_afford := energy >= cost
+		var level := int(upgrade_levels[i])
+		var card: Button = ui_labels["upgrade_%d" % i]
+		var state_label: Label = ui_labels["upgrade_state_%d" % i]
+		var cost_label: Label = ui_labels["upgrade_cost_%d" % i]
+		var level_label: Label = ui_labels["upgrade_level_%d" % i]
+		var accent: ColorRect = ui_labels["upgrade_accent_%d" % i]
+		card.disabled = not can_afford
+		card.modulate = Color.WHITE
+		level_label.text = "LEVEL  %02d" % level
+		cost_label.text = "✦  %s ENERGY" % _format_number(cost)
+		if upgrade_feedback_time[i] > 0.0:
+			state_label.text = "FORGED!  +1 LEVEL"
+			state_label.add_theme_color_override("font_color", Color("#ffe6a0"))
+		elif can_afford and level == 0:
+			state_label.text = "READY TO FORGE"
+			state_label.add_theme_color_override("font_color", Color("#f2bb70"))
+		elif can_afford:
+			state_label.text = "UPGRADE READY"
+			state_label.add_theme_color_override("font_color", Color("#e5b56f"))
+		elif level > 0:
+			state_label.text = "FORGED • NEED ENERGY"
+			state_label.add_theme_color_override("font_color", Color("#a88a83"))
+		else:
+			state_label.text = "NEED ENERGY"
+			state_label.add_theme_color_override("font_color", Color("#907b82"))
+		accent.color = Color("#e6a45d") if can_afford else Color("#513541")
+		var normal := StyleBoxFlat.new()
+		normal.bg_color = Color("#21151b") if can_afford else Color("#100d14")
+		normal.border_color = Color("#a96b3d") if can_afford else Color("#44303a")
+		normal.set_border_width_all(2 if can_afford else 1)
+		normal.set_corner_radius_all(12)
+		normal.shadow_color = Color(0.0, 0.0, 0.0, 0.52)
+		normal.shadow_size = 9
+		normal.content_margin_left = 14
+		normal.content_margin_right = 14
+		normal.content_margin_top = 12
+		normal.content_margin_bottom = 12
+		var hover := normal.duplicate() as StyleBoxFlat
+		hover.bg_color = Color("#38221e") if can_afford else Color("#18121a")
+		hover.border_color = Color("#ffd080") if can_afford else Color("#72505a")
+		hover.set_border_width_all(2)
+		var pressed := normal.duplicate() as StyleBoxFlat
+		pressed.bg_color = Color("#110a10")
+		pressed.border_color = Color("#d47746")
+		var disabled_style := normal.duplicate() as StyleBoxFlat
+		disabled_style.bg_color = Color("#100d14")
+		disabled_style.border_color = Color("#44303a")
+		card.add_theme_stylebox_override("normal", normal)
+		card.add_theme_stylebox_override("hover", hover)
+		card.add_theme_stylebox_override("pressed", pressed)
+		card.add_theme_stylebox_override("disabled", disabled_style)
 
 func _format_number(value: float) -> String:
 	if value >= 1.0e12:
