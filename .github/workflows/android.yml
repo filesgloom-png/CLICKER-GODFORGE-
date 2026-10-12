@@ -37,6 +37,8 @@ jobs:
 
       - name: Install Android SDK components
         uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
 
       - name: Configure Android SDK
         shell: bash
@@ -78,7 +80,7 @@ jobs:
         shell: bash
         run: |
           godot --headless --editor --path . --quit
-          godot --headless --path . --quit-after 4 2>&1 | tee "$RUNNER_TEMP/godot-smoke.log"
+          godot --headless --path . --quit-after 240 2>&1 | tee "$RUNNER_TEMP/godot-smoke.log"
           if grep -E "SCRIPT ERROR:|Parse Error:|Failed to load script" "$RUNNER_TEMP/godot-smoke.log"; then
             echo "Godot runtime smoke test reported script errors."
             exit 1
