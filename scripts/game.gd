@@ -558,21 +558,21 @@ func _build_upgrade_card(index: int, pos: Vector2) -> void:
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_name_%d" % index] = title
 
-	var desc := _label(UPGRADE_DESC[index], pos + Vector2(16, 66), Vector2(258, 27), 11, Color("#bda39d"))
+	var desc := _label(UPGRADE_DESC[index], pos + Vector2(16, 64), Vector2(258, 22), 11, Color("#bda39d"))
 	desc.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_desc_%d" % index] = desc
 
-	var level_label := _label("УРОВЕНЬ  00", pos + Vector2(16, 98), Vector2(92, 20), 11, Color("#e5c8a2"))
+	var level_label := _label("УРОВЕНЬ  00", pos + Vector2(16, 101), Vector2(92, 18), 11, Color("#e5c8a2"))
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_level_%d" % index] = level_label
 
-	var state_label := _label("ГОТОВО К КОВКЕ", pos + Vector2(104, 98), Vector2(172, 20), 9, Color("#f2bb70"))
+	var state_label := _label("ГОТОВО К КОВКЕ", pos + Vector2(104, 101), Vector2(172, 18), 9, Color("#f2bb70"))
 	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_state_%d" % index] = state_label
 
-	var preview_label := _label("", pos + Vector2(16, 84), Vector2(258, 16), 10, Color("#c99b76"))
+	var preview_label := _label("", pos + Vector2(16, 86), Vector2(258, 14), 10, Color("#c99b76"))
 	preview_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_preview_%d" % index] = preview_label
 
