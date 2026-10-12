@@ -52,6 +52,7 @@ var boss_history: Array[Dictionary] = []
 var lifetime_energy_earned := 0.0
 var session_started_at := 0
 var total_play_seconds := 0
+var boss_stage_start_clicks := 0
 var victory_summary: Control
 
 func _ready() -> void:
@@ -760,7 +761,9 @@ func _open_victory_summary() -> void:
 			var label := Label.new()
 			label.position = Vector2(12, 3)
 			label.size = Vector2(585, 42)
-			label.text = "МИР %02d  •  %s\nНАГРАДА: %s ЭНЕРГИИ" % [int(entry.get("stage", 0)), str(entry.get("name", "СТРАЖ")), _format_number(float(entry.get("reward", 0.0)))]
+			var won_at: int = int(entry.get("timestamp", 0))
+			var date_text := Time.get_datetime_string_from_unix_time(won_at, true) if won_at > 0 else "ВРЕМЯ НЕИЗВЕСТНО"
+			label.text = "МИР %02d  •  %s  •  УДАРОВ: %s\nНАГРАДА: %s ЭНЕРГИИ  •  %s" % [int(entry.get("stage", 0)), str(entry.get("name", "СТРАЖ")), _format_number(float(entry.get("hits", 0))), _format_number(float(entry.get("reward", 0.0))), date_text]
 			label.add_theme_font_size_override("font_size", 12)
 			label.add_theme_color_override("font_color", Color("#f2d6ac"))
 			row.add_child(label)
@@ -830,9 +833,10 @@ func _strike_core() -> void:
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
 	if boss_hp <= 0.0:
 		boss_victories += 1
-		boss_history.append({"stage": boss_stage, "name": _boss_name(boss_stage), "reward": 250.0 * (boss_stage + 1), "timestamp": int(Time.get_unix_time_from_system())})
+		boss_history.append({"stage": boss_stage, "name": _boss_name(boss_stage), "reward": 250.0 * (boss_stage + 1), "hits": total_clicks - boss_stage_start_clicks, "timestamp": int(Time.get_unix_time_from_system())})
 		if boss_history.size() > 50:
 			boss_history.pop_front()
+		boss_stage_start_clicks = total_clicks
 		boss_stage += 1
 		_check_achievements()
 		last_boss_reward = 250.0 * boss_stage
@@ -885,6 +889,7 @@ func _upgrade_cost(index: int) -> float:
 func _activate_ad_demo() -> void:
 	ad_boost_time = 60.0
 	energy += 50.0 * multiplier
+	lifetime_energy_earned += 50.0 * multiplier
 	if boost_button != null:
 		boost_button.text = "БОНУС x2  60 с"
 	_refresh_ui()
@@ -1095,6 +1100,7 @@ func _save_game() -> void:
 	cfg.set_value("progress", "boss_history", boss_history)
 	cfg.set_value("progress", "lifetime_energy_earned", lifetime_energy_earned)
 	cfg.set_value("progress", "total_play_seconds", total_play_seconds + maxi(int(Time.get_unix_time_from_system()) - session_started_at, 0))
+	cfg.set_value("progress", "boss_stage_start_clicks", boss_stage_start_clicks)
 	cfg.set_value("progress", "last_time", int(Time.get_unix_time_from_system()))
 	cfg.save(SAVE_PATH)
 
@@ -1118,9 +1124,12 @@ func _load_game() -> void:
 	boss_history = cfg.get_value("progress", "boss_history", [])
 	lifetime_energy_earned = float(cfg.get_value("progress", "lifetime_energy_earned", energy))
 	total_play_seconds = int(cfg.get_value("progress", "total_play_seconds", 0))
+	boss_stage_start_clicks = int(cfg.get_value("progress", "boss_stage_start_clicks", total_clicks))
 	var last_time := int(cfg.get_value("progress", "last_time", int(Time.get_unix_time_from_system())))
 	var elapsed := clampf(float(Time.get_unix_time_from_system() - last_time), 0.0, 28800.0)
-	energy += idle_rate * multiplier * elapsed * 0.5
+	var offline_gain: float = idle_rate * multiplier * elapsed * 0.5
+	energy += offline_gain
+	lifetime_energy_earned += offline_gain
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_WM_CLOSE_REQUEST:
