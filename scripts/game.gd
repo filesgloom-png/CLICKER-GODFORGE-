@@ -48,12 +48,18 @@ var achievement_popup_time := 0.0
 var achievement_popup_text := ""
 var achievement_popup_queue: Array[String] = []
 var claimed_achievements: Array[String] = []
+var boss_history: Array[Dictionary] = []
+var lifetime_energy_earned := 0.0
+var session_started_at := 0
+var total_play_seconds := 0
+var victory_summary: Control
 
 func _ready() -> void:
 	rng.randomize()
 	for i in range(100):
 		stars.append(Vector3(rng.randf(), rng.randf(), rng.randf_range(0.3, 1.0)))
 	_load_game()
+	session_started_at = int(Time.get_unix_time_from_system())
 	set_process(true)
 	_show_splash()
 	await get_tree().create_timer(2.4).timeout
@@ -103,7 +109,9 @@ func _process(delta: float) -> void:
 	if idle_clock >= 1.0:
 		idle_clock = 0.0
 		if playing and idle_rate > 0.0:
-			energy += idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)
+			var passive_gain: float = idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)
+			energy += passive_gain
+			lifetime_energy_earned += passive_gain
 			_refresh_ui()
 	for i in range(4):
 		if upgrade_feedback_time[i] > 0.0:
@@ -419,6 +427,9 @@ func _build_game_ui() -> void:
 	journal_button = _button("ЛЕТОПИСЬ  0/9", Vector2(565, 22), Vector2(190, 42), false)
 	journal_button.add_theme_font_size_override("font_size", 13)
 	journal_button.pressed.connect(_open_journal)
+	var history_button := _button("ИСТОРИЯ", Vector2(565, 68), Vector2(190, 30), false)
+	history_button.add_theme_font_size_override("font_size", 11)
+	history_button.pressed.connect(_open_victory_summary)
 	_panel(Vector2(30, 118), Vector2(255, 340))
 	_label("СОСТОЯНИЕ КУЗНИ", Vector2(52, 136), Vector2(210, 26), 16, Color("#e7c9a5"))
 	ui_labels["power"] = _label("СИЛА УДАРА\n1", Vector2(52, 180), Vector2(210, 52), 18, Color("#f2b75d"))
@@ -685,6 +696,107 @@ func _open_journal() -> void:
 		journal_overlay.add_child(progress_label)
 
 
+func _open_victory_summary() -> void:
+	if victory_summary != null and is_instance_valid(victory_summary):
+		return
+	victory_summary = Control.new()
+	victory_summary.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	victory_summary.mouse_filter = Control.MOUSE_FILTER_STOP
+	victory_summary.z_index = 110
+	add_child(victory_summary)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.015, 0.008, 0.02, 0.9)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	victory_summary.add_child(dim)
+
+	var frame := Panel.new()
+	frame.position = Vector2(280, 55)
+	frame.size = Vector2(720, 610)
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#100b13")
+	style.border_color = Color("#b87949")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(14)
+	frame.add_theme_stylebox_override("panel", style)
+	victory_summary.add_child(frame)
+
+	_add_summary_label("ХРОНИКИ ПОБЕД", Vector2(315, 73), Vector2(500, 38), 26, Color("#f2d6ac"))
+	_add_summary_label("ПОБЕДЫ: %d  •  МИР: %02d  •  ВСЕГО УДАРОВ: %s" % [boss_victories, boss_stage, _format_number(total_clicks)], Vector2(318, 116), Vector2(640, 26), 13, Color("#d4a77f"))
+	var elapsed_total: int = total_play_seconds + maxi(int(Time.get_unix_time_from_system()) - session_started_at, 0)
+	var hours: int = elapsed_total / 3600
+	var minutes: int = (elapsed_total % 3600) / 60
+	_add_summary_label("ВРЕМЯ В КУЗНЕ: %02d ч %02d мин  •  ВСЕГО ЗАРАБОТАНО: %s" % [hours, minutes, _format_number(lifetime_energy_earned)], Vector2(318, 145), Vector2(640, 24), 11, Color("#b89a9c"))
+	_add_summary_label("ПОСЛЕДНИЕ ПОБЕДЫ", Vector2(318, 185), Vector2(500, 25), 15, Color("#e8c18b"))
+
+	var history_scroll := ScrollContainer.new()
+	history_scroll.position = Vector2(315, 215)
+	history_scroll.size = Vector2(650, 350)
+	history_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	victory_summary.add_child(history_scroll)
+	var history_list := VBoxContainer.new()
+	history_list.custom_minimum_size = Vector2(620, 0)
+	history_list.add_theme_constant_override("separation", 7)
+	history_scroll.add_child(history_list)
+	if boss_history.is_empty():
+		var empty := Label.new()
+		empty.text = "Победы появятся здесь после первого поверженного стража."
+		empty.add_theme_font_size_override("font_size", 14)
+		empty.add_theme_color_override("font_color", Color("#a58b91"))
+		history_list.add_child(empty)
+	else:
+		for i in range(boss_history.size() - 1, -1, -1):
+			var entry: Dictionary = boss_history[i]
+			var row := Panel.new()
+			row.custom_minimum_size = Vector2(610, 50)
+			var row_style := StyleBoxFlat.new()
+			row_style.bg_color = Color("#21151b")
+			row_style.border_color = Color("#69402f")
+			row_style.set_border_width_all(1)
+			row_style.set_corner_radius_all(7)
+			row.add_theme_stylebox_override("panel", row_style)
+			history_list.add_child(row)
+			var label := Label.new()
+			label.position = Vector2(12, 3)
+			label.size = Vector2(585, 42)
+			label.text = "МИР %02d  •  %s\nНАГРАДА: %s ЭНЕРГИИ" % [int(entry.get("stage", 0)), str(entry.get("name", "СТРАЖ")), _format_number(float(entry.get("reward", 0.0)))]
+			label.add_theme_font_size_override("font_size", 12)
+			label.add_theme_color_override("font_color", Color("#f2d6ac"))
+			row.add_child(label)
+
+	var close := Button.new()
+	close.position = Vector2(850, 595)
+	close.size = Vector2(105, 42)
+	close.text = "ЗАКРЫТЬ"
+	close.focus_mode = Control.FOCUS_NONE
+	var close_style := StyleBoxFlat.new()
+	close_style.bg_color = Color("#321b20")
+	close_style.border_color = Color("#9d5b42")
+	close_style.set_border_width_all(1)
+	close_style.set_corner_radius_all(8)
+	close.add_theme_stylebox_override("normal", close_style)
+	close.add_theme_stylebox_override("hover", close_style)
+	close.pressed.connect(_close_victory_summary)
+	victory_summary.add_child(close)
+
+
+func _add_summary_label(value: String, pos: Vector2, size: Vector2, font_size: int, color: Color) -> void:
+	var label := Label.new()
+	label.position = pos
+	label.size = size
+	label.text = value
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	victory_summary.add_child(label)
+
+
+func _close_victory_summary() -> void:
+	if victory_summary != null and is_instance_valid(victory_summary):
+		victory_summary.queue_free()
+	victory_summary = null
+
+
 func _close_journal() -> void:
 	if journal_overlay != null and is_instance_valid(journal_overlay):
 		journal_overlay.queue_free()
@@ -706,6 +818,7 @@ func _strike_core() -> void:
 		damage *= 5.0
 		critical_flash = 1.0
 	energy += damage
+	lifetime_energy_earned += damage
 	var boss_hit_damage := damage * boss_damage
 	boss_hp -= boss_hit_damage
 	boss_hit_flash = 1.0
@@ -717,10 +830,14 @@ func _strike_core() -> void:
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
 	if boss_hp <= 0.0:
 		boss_victories += 1
+		boss_history.append({"stage": boss_stage, "name": _boss_name(boss_stage), "reward": 250.0 * (boss_stage + 1), "timestamp": int(Time.get_unix_time_from_system())})
+		if boss_history.size() > 50:
+			boss_history.pop_front()
 		boss_stage += 1
 		_check_achievements()
 		last_boss_reward = 250.0 * boss_stage
 		energy += last_boss_reward
+		lifetime_energy_earned += last_boss_reward
 		victory_banner_time = 2.2
 		victory_banner_text = "СТРАЖ СОКРУШЁН  •  +%s ЭНЕРГИИ" % _format_number(last_boss_reward)
 		boss_max_hp *= 1.72
@@ -956,6 +1073,7 @@ func _clear_ui() -> void:
 	boss_bar = null
 	core_button = null
 	boost_button = null
+	victory_summary = null
 	journal_button = null
 	journal_overlay = null
 
@@ -974,6 +1092,9 @@ func _save_game() -> void:
 	cfg.set_value("progress", "total_upgrades", total_upgrades)
 	cfg.set_value("progress", "boss_victories", boss_victories)
 	cfg.set_value("progress", "claimed_achievements", claimed_achievements)
+	cfg.set_value("progress", "boss_history", boss_history)
+	cfg.set_value("progress", "lifetime_energy_earned", lifetime_energy_earned)
+	cfg.set_value("progress", "total_play_seconds", total_play_seconds + maxi(int(Time.get_unix_time_from_system()) - session_started_at, 0))
 	cfg.set_value("progress", "last_time", int(Time.get_unix_time_from_system()))
 	cfg.save(SAVE_PATH)
 
@@ -994,6 +1115,9 @@ func _load_game() -> void:
 	total_upgrades = int(cfg.get_value("progress", "total_upgrades", 0))
 	boss_victories = int(cfg.get_value("progress", "boss_victories", maxi(boss_stage - 1, 0)))
 	claimed_achievements = cfg.get_value("progress", "claimed_achievements", [])
+	boss_history = cfg.get_value("progress", "boss_history", [])
+	lifetime_energy_earned = float(cfg.get_value("progress", "lifetime_energy_earned", energy))
+	total_play_seconds = int(cfg.get_value("progress", "total_play_seconds", 0))
 	var last_time := int(cfg.get_value("progress", "last_time", int(Time.get_unix_time_from_system())))
 	var elapsed := clampf(float(Time.get_unix_time_from_system() - last_time), 0.0, 28800.0)
 	energy += idle_rate * multiplier * elapsed * 0.5
