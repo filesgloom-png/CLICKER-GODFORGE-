@@ -98,8 +98,6 @@ func _draw() -> void:
 		var p := Vector2(star.x * size.x, star.y * size.y)
 		var twinkle := 0.18 + 0.34 * absf(sin(pulse * star.z + star.x * 20.0))
 		draw_circle(p, 0.6 + star.z * 1.1, Color(1.0, 0.64, 0.34, twinkle))
-	# A translucent portrait behind the gatekeeper panel gives each realm a distinct boss silhouette.
-	_draw_boss_portrait(Vector2(size.x * 0.858, size.y * 0.445), boss_stage)
 	var center := Vector2(size.x * 0.5, size.y * 0.48 + core_recoil * 9.0)
 	var core_size := 1.0 + 0.035 * sin(pulse * 2.2) + hit_flash * 0.12
 	# Wide atmospheric bloom.
@@ -132,6 +130,8 @@ func _draw() -> void:
 		var a := TAU * float(i) / 12.0 - pulse * 0.3
 		var p := center + Vector2(cos(a), sin(a)) * (76.0 + 8.0 * sin(pulse + a))
 		draw_circle(p, 2.0 + hit_flash, Color(1.0, 0.58, 0.24, 0.8))
+	# Keep the realm boss in the open channel between the core and the right HUD; placing it under the opaque panel hid it completely.
+	_draw_boss_portrait(Vector2(size.x * 0.674, size.y * 0.445), boss_stage)
 	for ember in ember_particles:
 		draw_circle(Vector2(ember.x, ember.y), 1.4 + hit_flash, Color(1.0, 0.49, 0.16, 0.72))
 	# Critical strikes create a bright expanding rune shockwave.
