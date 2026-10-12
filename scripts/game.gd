@@ -158,9 +158,21 @@ func _build_game_ui() -> void:
 	ui_labels["crit"] = _label("CRITICAL CHANCE\n5%", Vector2(52, 250), Vector2(210, 48), 14, Color("#d98a69"))
 	ui_labels["dps"] = _label("IDLE OUTPUT\n0 / sec", Vector2(52, 316), Vector2(210, 48), 14, Color("#c7a7a0"))
 	_label("THE CORE RESPONDS TO EVERY STRIKE", Vector2(310, 118), Vector2(660, 24), 12, Color("#b98a72")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	core_button = _button("STRIKE THE CORE", Vector2(440, 215), Vector2(400, 200), false)
-	core_button.add_theme_font_size_override("font_size", 23)
+	core_button = _button("", Vector2(505, 215), Vector2(270, 220), false)
+	var core_normal := StyleBoxFlat.new()
+	core_normal.bg_color = Color(0, 0, 0, 0)
+	core_normal.border_color = Color(0, 0, 0, 0)
+	core_normal.set_border_width_all(0)
+	var core_hover := core_normal.duplicate() as StyleBoxFlat
+	core_hover.bg_color = Color(0.85, 0.28, 0.08, 0.06)
+	var core_pressed := core_normal.duplicate() as StyleBoxFlat
+	core_pressed.bg_color = Color(1.0, 0.55, 0.18, 0.12)
+	core_button.add_theme_stylebox_override("normal", core_normal)
+	core_button.add_theme_stylebox_override("hover", core_hover)
+	core_button.add_theme_stylebox_override("pressed", core_pressed)
 	core_button.pressed.connect(_strike_core)
+	ui_labels["hit"] = _label("TAP TO STRIKE", Vector2(510, 420), Vector2(260, 25), 12, Color("#d58b4c"))
+	ui_labels["hit"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_panel(Vector2(945, 118), Vector2(305, 340))
 	_label("GATEKEEPER", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
 	ui_labels["boss"] = _label("THE HOLLOW TITAN", Vector2(968, 168), Vector2(250, 24), 13, Color("#f0d9c2"))
@@ -209,8 +221,9 @@ func _strike_core() -> void:
 		damage *= 5.0
 	energy += damage
 	boss_hp -= damage * boss_damage
-	if core_button != null:
-		core_button.text = "CRITICAL STRIKE!" if critical else "STRIKE THE CORE"
+	if ui_labels.has("hit"):
+		ui_labels["hit"].text = ("CRITICAL HIT!  +" if critical else "CORE STRUCK  +") + _format_number(damage)
+		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
 	if boss_hp <= 0.0:
 		boss_stage += 1
 		energy += 250.0 * boss_stage
