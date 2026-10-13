@@ -1414,6 +1414,25 @@ func _open_rpg_character_panel() -> void:
 		rpg_character_overlay.add_child(slot_name)
 		var slot_status := _character_panel_label("ПУСТОЙ СЛОТ", Vector2(580 + col * 211, 336 + row * 62), Vector2(138, 16), 9, Color("#796872"))
 		rpg_character_overlay.add_child(slot_status)
+		var slot_button := Button.new()
+		slot_button.position = slot.position
+		slot_button.size = slot.size
+		slot_button.text = ""
+		slot_button.focus_mode = Control.FOCUS_NONE
+		var slot_idle := StyleBoxFlat.new()
+		slot_idle.bg_color = Color(0, 0, 0, 0)
+		slot_idle.border_color = Color(0, 0, 0, 0)
+		slot_idle.set_border_width_all(0)
+		slot_idle.set_corner_radius_all(7)
+		var slot_hover := slot_idle.duplicate() as StyleBoxFlat
+		slot_hover.bg_color = Color(0.9, 0.55, 0.25, 0.07)
+		slot_hover.border_color = Color("#c49b80")
+		slot_hover.set_border_width_all(1)
+		slot_button.add_theme_stylebox_override("normal", slot_idle)
+		slot_button.add_theme_stylebox_override("hover", slot_hover)
+		slot_button.add_theme_stylebox_override("pressed", slot_hover)
+		slot_button.pressed.connect(_open_rpg_detail_card.bind(equipment_names[i], "СЛОТ ЭКИПИРОВКИ", equipment_glyphs[i], Color("#e6a45d"), "Здесь будет предмет категории «%s».\n\nСистема экипировки пока находится в разработке. Этот просмотр не меняет характеристики героя, урон или сохранение." % equipment_names[i]))
+		rpg_character_overlay.add_child(slot_button)
 
 	var skills_title := _character_panel_label("НАВЫКИ", Vector2(530, 445), Vector2(400, 22), 14, Color("#f2d6ac"))
 	rpg_character_overlay.add_child(skills_title)
@@ -1437,9 +1456,62 @@ func _open_rpg_character_panel() -> void:
 		var skill_name := _character_panel_label(skill_names[i], Vector2(col_x + 3, 507), Vector2(120, 18), 8, Color("#a58b91"))
 		skill_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rpg_character_overlay.add_child(skill_name)
+		var skill_button := Button.new()
+		skill_button.position = skill_slot.position
+		skill_button.size = skill_slot.size
+		skill_button.text = ""
+		skill_button.focus_mode = Control.FOCUS_NONE
+		var skill_idle := StyleBoxFlat.new()
+		skill_idle.bg_color = Color(0, 0, 0, 0)
+		skill_idle.border_color = Color(0, 0, 0, 0)
+		skill_idle.set_border_width_all(0)
+		skill_idle.set_corner_radius_all(7)
+		var skill_hover := skill_idle.duplicate() as StyleBoxFlat
+		skill_hover.bg_color = Color(0.55, 0.35, 0.85, 0.09)
+		skill_hover.border_color = Color("#8b6db1")
+		skill_hover.set_border_width_all(1)
+		skill_button.add_theme_stylebox_override("normal", skill_idle)
+		skill_button.add_theme_stylebox_override("hover", skill_hover)
+		skill_button.add_theme_stylebox_override("pressed", skill_hover)
+		skill_button.pressed.connect(_open_rpg_detail_card.bind(skill_names[i], "БОЕВОЙ НАВЫК", skill_glyphs[i], Color("#a58be0"), "Описание навыка «%s».\n\nАктивная способность пока не подключена к бою. Нажатие открывает только эту карточку и не расходует ресурсы." % skill_names[i]))
+		rpg_character_overlay.add_child(skill_button)
 
 	var note := _character_panel_label("ВИЗУАЛЬНЫЙ ПРОТОТИП  •  СНАРЯЖЕНИЕ И НАВЫКИ ПОКА НЕ ВЛИЯЮТ НА БОЙ", Vector2(530, 565), Vector2(410, 26), 9, Color("#8d777d"))
 	rpg_character_overlay.add_child(note)
+
+
+func _open_rpg_detail_card(title_value: String, category_value: String, glyph_value: String, accent: Color, description_value: String) -> void:
+	if rpg_character_overlay == null or not is_instance_valid(rpg_character_overlay):
+		return
+	var detail := Panel.new()
+	detail.name = "RPGDetailCard"
+	detail.position = Vector2(350, 220)
+	detail.size = Vector2(580, 280)
+	detail.z_index = 10
+	var detail_style := StyleBoxFlat.new()
+	detail_style.bg_color = Color("#130d17")
+	detail_style.border_color = accent
+	detail_style.set_border_width_all(2)
+	detail_style.set_corner_radius_all(12)
+	detail_style.shadow_color = Color(0, 0, 0, 0.8)
+	detail_style.shadow_size = 18
+	detail.add_theme_stylebox_override("panel", detail_style)
+	rpg_character_overlay.add_child(detail)
+	var glyph := _character_panel_label(glyph_value, Vector2(28, 28), Vector2(74, 74), 42, accent)
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detail.add_child(glyph)
+	var category := _character_panel_label(category_value, Vector2(120, 28), Vector2(400, 20), 10, Color("#c49b80"))
+	detail.add_child(category)
+	var title := _character_panel_label(title_value, Vector2(120, 50), Vector2(410, 34), 20, Color("#f2d6ac"))
+	detail.add_child(title)
+	var description := _character_panel_label(description_value, Vector2(32, 116), Vector2(516, 92), 12, Color("#c8b0b0"))
+	description.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_child(description)
+	var status := _character_panel_label("ДЕМО-КАРТОЧКА  •  БЕЗ ВЛИЯНИЯ НА БАЛАНС", Vector2(32, 218), Vector2(340, 18), 9, accent)
+	detail.add_child(status)
+	var close := _hero_overlay_button("ПОНЯТНО", Vector2(414, 216), Vector2(132, 38), true)
+	close.pressed.connect(detail.queue_free)
+	detail.add_child(close)
 
 
 func _character_panel_label(text_value: String, pos: Vector2, label_size: Vector2, font_size: int, color: Color) -> Label:
