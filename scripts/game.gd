@@ -44,6 +44,8 @@ var core_button: Button
 var boost_button: Button
 var journal_button: Button
 var journal_overlay: Control
+var story_button: Button
+var story_overlay: Control
 var total_clicks := 0
 var total_upgrades := 0
 var boss_victories := 0
@@ -491,7 +493,10 @@ func _build_game_ui() -> void:
 	milestone_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(milestone_fill)
 	ui_labels["milestone_fill"] = milestone_fill
-	_label("ЯДРО ОТЗЫВАЕТСЯ НА КАЖДЫЙ УДАР", Vector2(310, 118), Vector2(660, 24), 12, Color("#b98a72")).horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	story_button = _button("", Vector2(385, 112), Vector2(510, 28), false)
+	story_button.add_theme_font_size_override("font_size", 11)
+	story_button.pressed.connect(_open_story)
+	ui_labels["story_button"] = story_button
 	core_button = _button("", Vector2(505, 215), Vector2(270, 220), false)
 	var core_normal := StyleBoxFlat.new()
 	core_normal.bg_color = Color(0, 0, 0, 0)
@@ -790,6 +795,147 @@ func _open_journal() -> void:
 		journal_overlay.add_child(progress_label)
 
 
+func _story_chapters() -> Array[Dictionary]:
+	return [
+		{"stage": 1, "title": "ГЛАВА I — ГОЛОС ПОД ПЕПЛОМ", "text": "До начала времён Кузня Богов удерживала миры от распада. Но однажды её сердце раскололось, а храм превратился в пепельное святилище. Из ядра доносится шёпот: «Не доверяй тем, кто охраняет печати». Первый Страж закрывает путь к истине."},
+		{"stage": 2, "title": "ГЛАВА II — ЗМЕЙ БЕЗ НЕБА", "text": "Пепельный Змей был хранителем небесного горнила. Он помнит, как боги покинули свои троны, но его память скована древней руной. Когда Страж пал, руна вспыхнула и показала: печати созданы не для защиты мира, а для удержания чего-то внутри."},
+		{"stage": 3, "title": "ГЛАВА III — КОРОЛЕВА ПЕЛЕНЫ", "text": "За завесой Королевы Пелены лежит забытый город кузнецов. Его жители первыми услышали сердцебиение под миром — и первыми исчезли. Королева не просит пощады. Она шепчет последнее предупреждение: «Если сердце проснётся, оно вспомнит своего мастера»."},
+		{"stage": 4, "title": "ГЛАВА IV — ЖЕЛЕЗНЫЙ СВЯТОЙ", "text": "Железный Святой был последним человеком, поклявшимся защищать Кузню. Его тело выковано из обломков печатей, а вера стала цепью. Победа над ним открывает проход за пределы святилища. Там нет звёзд — только гигантские цепи, уходящие в пустоту."},
+		{"stage": 5, "title": "ГЛАВА V — ЦЕПИ ПУСТОТЫ", "text": "За храмом тянется бесконечная бездна. Цепи удерживают не чудовище, а само сердце Кузни. Боги не создали его: они нашли его и попытались присвоить его силу. Каждый поверженный Страж ослабляет замки, но и пробуждает то, что ждёт по ту сторону."},
+		{"stage": 10, "title": "ГЛАВА VI — ПАМЯТЬ МИРОВ", "text": "Десятый мир хранит эхо первой войны. Кузнецы пытались расколоть сердце, чтобы ни один бог не смог владеть им. Осколки стали источником силы для всех миров — и проклятием, которое заставляет Стражей возвращаться. Герой начинает понимать: он не завоеватель, а наследник незавершённой работы."},
+		{"stage": 25, "title": "ГЛАВА VII — ПОСЛЕДНИЙ МАСТЕР", "text": "Двадцать пятый мир раскрывает правду: сердце Кузни зовёт не ради освобождения, а ради выбора. Последний мастер должен решить, станет ли он новым богом, навсегда скрепит печати или перекуёт саму основу миров. Ответ ещё не найден. Кузня ждёт следующего удара."}
+	]
+
+
+func _current_story_chapter() -> int:
+	var chapters := _story_chapters()
+	var current := 0
+	for i in range(chapters.size()):
+		if boss_stage >= int(chapters[i]["stage"]):
+			current = i
+	return current
+
+
+func _open_story() -> void:
+	if story_overlay != null and is_instance_valid(story_overlay):
+		return
+	story_overlay = Control.new()
+	story_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	story_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	story_overlay.z_index = 120
+	add_child(story_overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.012, 0.006, 0.018, 0.91)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	story_overlay.add_child(dim)
+
+	var frame := Panel.new()
+	frame.position = Vector2(250, 42)
+	frame.size = Vector2(780, 636)
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color("#100b13")
+	frame_style.border_color = Color("#b87949")
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(14)
+	frame_style.shadow_color = Color(0, 0, 0, 0.72)
+	frame_style.shadow_size = 22
+	frame.add_theme_stylebox_override("panel", frame_style)
+	story_overlay.add_child(frame)
+
+	var title := Label.new()
+	title.position = Vector2(286, 60)
+	title.size = Vector2(600, 38)
+	title.text = "ХРОНИКИ КУЗНИ БОГОВ"
+	title.add_theme_font_size_override("font_size", 25)
+	title.add_theme_color_override("font_color", Color("#f2d6ac"))
+	story_overlay.add_child(title)
+
+	var chapter_index := _current_story_chapter()
+	var chapters := _story_chapters()
+	var current_chapter: Dictionary = chapters[chapter_index]
+	var subtitle := Label.new()
+	subtitle.position = Vector2(288, 101)
+	subtitle.size = Vector2(650, 26)
+	subtitle.text = "ОТКРЫТО %d ИЗ %d ГЛАВ  •  ТЕКУЩИЙ РУБЕЖ: МИР %02d" % [chapter_index + 1, chapters.size(), boss_stage]
+	subtitle.add_theme_font_size_override("font_size", 12)
+	subtitle.add_theme_color_override("font_color", Color("#c49b80"))
+	story_overlay.add_child(subtitle)
+
+	var close := Button.new()
+	close.position = Vector2(925, 53)
+	close.size = Vector2(58, 42)
+	close.text = "✕"
+	close.focus_mode = Control.FOCUS_NONE
+	close.add_theme_font_size_override("font_size", 20)
+	close.add_theme_color_override("font_color", Color("#f2d6ac"))
+	var close_style := StyleBoxFlat.new()
+	close_style.bg_color = Color("#321b20")
+	close_style.border_color = Color("#9d5b42")
+	close_style.set_border_width_all(1)
+	close_style.set_corner_radius_all(8)
+	close.add_theme_stylebox_override("normal", close_style)
+	close.add_theme_stylebox_override("hover", close_style)
+	close.pressed.connect(_close_story)
+	story_overlay.add_child(close)
+
+	var scroll := ScrollContainer.new()
+	scroll.position = Vector2(280, 140)
+	scroll.size = Vector2(720, 510)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	story_overlay.add_child(scroll)
+	var chapter_list := VBoxContainer.new()
+	chapter_list.custom_minimum_size = Vector2(690, 0)
+	chapter_list.add_theme_constant_override("separation", 10)
+	scroll.add_child(chapter_list)
+
+	for i in range(chapters.size()):
+		var chapter: Dictionary = chapters[i]
+		var unlocked := boss_stage >= int(chapter["stage"])
+		var chapter_panel := Panel.new()
+		chapter_panel.custom_minimum_size = Vector2(680, 104 if unlocked else 72)
+		var chapter_style := StyleBoxFlat.new()
+		chapter_style.bg_color = Color("#21151b") if unlocked else Color("#151019")
+		chapter_style.border_color = Color("#d58b4c") if i == chapter_index else (Color("#69402f") if unlocked else Color("#49313a"))
+		chapter_style.set_border_width_all(2 if i == chapter_index else 1)
+		chapter_style.set_corner_radius_all(8)
+		chapter_panel.add_theme_stylebox_override("panel", chapter_style)
+		chapter_list.add_child(chapter_panel)
+
+		var chapter_title := Label.new()
+		chapter_title.position = Vector2(14, 8)
+		chapter_title.size = Vector2(650, 22)
+		chapter_title.text = str(chapter["title"]) if unlocked else "ЗАПЕЧАТАНО  •  ОТКРОЕТСЯ В МИРЕ %02d" % int(chapter["stage"])
+		chapter_title.add_theme_font_size_override("font_size", 13)
+		chapter_title.add_theme_color_override("font_color", Color("#f2c27b") if unlocked else Color("#77636d"))
+		chapter_panel.add_child(chapter_title)
+
+		if unlocked:
+			var chapter_text := Label.new()
+			chapter_text.position = Vector2(14, 34)
+			chapter_text.size = Vector2(650, 62)
+			chapter_text.text = str(chapter["text"])
+			chapter_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			chapter_text.add_theme_font_size_override("font_size", 12)
+			chapter_text.add_theme_color_override("font_color", Color("#c9b0a5"))
+			chapter_panel.add_child(chapter_text)
+
+	var closing_note := Label.new()
+	closing_note.text = "ПЕПЕЛ ПОМНИТ КАЖДЫЙ УДАР. ИСТИНА ЖДЁТ ЗА СЛЕДУЮЩЕЙ ПЕЧАТЬЮ."
+	closing_note.add_theme_font_size_override("font_size", 10)
+	closing_note.add_theme_color_override("font_color", Color("#a9785d"))
+	closing_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	closing_note.custom_minimum_size = Vector2(680, 22)
+	chapter_list.add_child(closing_note)
+
+
+func _close_story() -> void:
+	if story_overlay != null and is_instance_valid(story_overlay):
+		story_overlay.queue_free()
+	story_overlay = null
+
+
 func _open_victory_summary() -> void:
 	if victory_summary != null and is_instance_valid(victory_summary):
 		return
@@ -1039,6 +1185,9 @@ func _refresh_ui() -> void:
 		return
 	if journal_button != null and is_instance_valid(journal_button):
 		journal_button.text = "ЛЕТОПИСЬ  %d/9" % _unlocked_achievement_count()
+	if story_button != null and is_instance_valid(story_button):
+		var chapters := _story_chapters()
+		story_button.text = "ХРОНИКИ  •  ГЛАВА %d/%d" % [_current_story_chapter() + 1, chapters.size()]
 	if ui_labels.has("energy"):
 		ui_labels["energy"].text = "ЭНЕРГИЯ  " + _format_number(energy)
 		ui_labels["energy"].add_theme_color_override("font_color", Color("#fff0a3").lerp(Color("#f5c16e"), 1.0 - energy_flash))
