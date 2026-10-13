@@ -1408,11 +1408,12 @@ func _refresh_ui() -> void:
 		else:
 			state_label.text = "НУЖНО ЕЩЁ  %s" % _format_number(maxf(cost - energy, 0.0))
 			state_label.add_theme_color_override("font_color", Color("#907b82"))
-		accent.color = Color("#e6a45d") if can_afford else Color("#513541")
+		# Rank tint is cosmetic; affordability remains communicated by the fill and state label.
+		accent.color = rank_color if level > 0 else (Color("#e6a45d") if can_afford else Color("#513541"))
 		var normal := StyleBoxFlat.new()
 		normal.bg_color = Color("#21151b") if can_afford else Color("#100d14")
-		normal.border_color = Color("#a96b3d") if can_afford else Color("#44303a")
-		normal.set_border_width_all(2 if can_afford else 1)
+		normal.border_color = rank_color.darkened(0.35) if level > 0 else (Color("#a96b3d") if can_afford else Color("#44303a"))
+		normal.set_border_width_all(2 if can_afford or level > 0 else 1)
 		normal.set_corner_radius_all(12)
 		normal.shadow_color = Color(0.0, 0.0, 0.0, 0.52)
 		normal.shadow_size = 9
@@ -1422,14 +1423,14 @@ func _refresh_ui() -> void:
 		normal.content_margin_bottom = 12
 		var hover := normal.duplicate() as StyleBoxFlat
 		hover.bg_color = Color("#38221e") if can_afford else Color("#18121a")
-		hover.border_color = Color("#ffd080") if can_afford else Color("#72505a")
+		hover.border_color = rank_color.lightened(0.25) if level > 0 else (Color("#ffd080") if can_afford else Color("#72505a"))
 		hover.set_border_width_all(2)
 		var pressed := normal.duplicate() as StyleBoxFlat
 		pressed.bg_color = Color("#110a10")
-		pressed.border_color = Color("#d47746")
+		pressed.border_color = rank_color if level > 0 else Color("#d47746")
 		var disabled_style := normal.duplicate() as StyleBoxFlat
 		disabled_style.bg_color = Color("#100d14")
-		disabled_style.border_color = Color("#44303a")
+		disabled_style.border_color = rank_color.darkened(0.55) if level > 0 else Color("#44303a")
 		card.add_theme_stylebox_override("normal", normal)
 		card.add_theme_stylebox_override("hover", hover)
 		card.add_theme_stylebox_override("pressed", pressed)
