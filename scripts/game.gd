@@ -91,6 +91,10 @@ func _process(delta: float) -> void:
 			if playing and ui_labels.has("combo"):
 				ui_labels["combo"].text = "СЕРИЯ УДАРОВ: —"
 				ui_labels["combo"].add_theme_color_override("font_color", Color("#8c777b"))
+	if ui_labels.has("combo_timer_fill"):
+		var combo_fill: ColorRect = ui_labels["combo_timer_fill"]
+		combo_fill.size.x = 250.0 * clampf(combo_time / 1.5, 0.0, 1.0)
+		combo_fill.color = Color("#ff795f") if combo_count >= 100 else (Color("#ffb56b") if combo_count >= 25 else Color("#e6a45d"))
 	if boss_bar != null and is_instance_valid(boss_bar):
 		boss_bar.modulate = Color(1.0, 1.0 + boss_hit_flash * 0.24, 1.0 + boss_hit_flash * 0.10, 1.0)
 	for popup_index in range(combat_popups.size() - 1, -1, -1):
@@ -481,6 +485,19 @@ func _build_game_ui() -> void:
 	ui_labels["hit"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ui_labels["combo"] = _label("СЕРИЯ УДАРОВ: —", Vector2(510, 445), Vector2(260, 22), 11, Color("#8c777b"))
 	ui_labels["combo"].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var combo_timer_track := ColorRect.new()
+	combo_timer_track.position = Vector2(515, 469)
+	combo_timer_track.size = Vector2(250, 4)
+	combo_timer_track.color = Color("#39232d")
+	combo_timer_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(combo_timer_track)
+	var combo_timer_fill := ColorRect.new()
+	combo_timer_fill.position = combo_timer_track.position
+	combo_timer_fill.size = Vector2.ZERO
+	combo_timer_fill.color = Color("#e6a45d")
+	combo_timer_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(combo_timer_fill)
+	ui_labels["combo_timer_fill"] = combo_timer_fill
 	_panel(Vector2(945, 118), Vector2(305, 340))
 	_label("СТРАЖ ВРАТ МИРА", Vector2(968, 136), Vector2(250, 24), 15, Color("#dfb89e"))
 	ui_labels["boss"] = _label(_boss_name(boss_stage), Vector2(968, 168), Vector2(250, 24), 13, Color("#f0d9c2"))
@@ -873,6 +890,10 @@ func _strike_core() -> void:
 		elif combo_count >= 10:
 			combo_color = Color("#ffe6a0")
 		ui_labels["combo"].add_theme_color_override("font_color", combo_color)
+		ui_labels["combo"].scale = Vector2.ONE
+		var combo_tween := create_tween()
+		combo_tween.tween_property(ui_labels["combo"], "scale", Vector2(1.12, 1.12), 0.07).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+		combo_tween.tween_property(ui_labels["combo"], "scale", Vector2.ONE, 0.13).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 	_check_achievements()
 	hit_flash = 1.0
 	core_recoil = 1.0
@@ -907,6 +928,10 @@ func _strike_core() -> void:
 		var combo_tier_color := Color("#ffe6a0") if combo_count < 50 else (Color("#ffb56b") if combo_count < 250 else Color("#ff795f"))
 		var combo_popup_size := 20 if combo_count < 100 else (23 if combo_count < 500 else 27)
 		combat_popups.append({"text": combo_title, "position": Vector2(640.0, 250.0), "life": 1.35, "size": combo_popup_size, "color": combo_tier_color})
+		if ui_labels.has("combo"):
+			var milestone_tween := create_tween()
+			milestone_tween.tween_property(ui_labels["combo"], "scale", Vector2(1.22, 1.22), 0.08).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+			milestone_tween.tween_property(ui_labels["combo"], "scale", Vector2.ONE, 0.18).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
 		critical_flash = maxf(critical_flash, 0.35 if combo_count < 100 else 0.5)
 		for particle_index in range(18 if combo_count < 100 else 32):
 			var burst_angle := rng.randf_range(0.0, TAU)
