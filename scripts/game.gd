@@ -59,6 +59,8 @@ var hero_draft_name := "Безымянный кузнец"
 var hero_draft_archetype := 0
 var hero_draft_armor := 0
 var hero_name_input: LineEdit
+var hero_preview_art: TextureRect
+var hero_hud_art: TextureRect
 var hero_preview_glyph: Label
 var hero_preview_name: Label
 var hero_preview_class: Label
@@ -1218,20 +1220,30 @@ func _activate_ad_demo() -> void:
 
 func _build_hero_hud() -> void:
 	_panel(Vector2(305, 164), Vector2(175, 270))
-	var crest := _label(HERO_GLYPHS[hero_archetype], Vector2(310, 182), Vector2(165, 92), 58, Color(HERO_ARMOR_COLORS[hero_armor]))
+	hero_hud_art = TextureRect.new()
+	hero_hud_art.position = Vector2(317, 169)
+	hero_hud_art.size = Vector2(150, 126)
+	hero_hud_art.texture = load("res://assets/hero_portrait.svg") as Texture2D
+	hero_hud_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero_hud_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero_hud_art.modulate = Color(HERO_ARMOR_COLORS[hero_armor]).lerp(Color.WHITE, 0.72)
+	hero_hud_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(hero_hud_art)
+	ui_labels["hero_hud_art"] = hero_hud_art
+	var crest := _label(HERO_GLYPHS[hero_archetype], Vector2(422, 177), Vector2(38, 42), 24, Color(HERO_ARMOR_COLORS[hero_armor]))
 	crest.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ui_labels["hero_crest"] = crest
-	var name_label := _label(hero_name, Vector2(316, 274), Vector2(153, 34), 15, Color("#f2d6ac"))
+	var name_label := _label(hero_name, Vector2(316, 294), Vector2(153, 30), 14, Color("#f2d6ac"))
 	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ui_labels["hero_name"] = name_label
-	var class_label := _label(HERO_ARCHETYPES[hero_archetype], Vector2(316, 309), Vector2(153, 42), 10, Color("#c49b80"))
+	var class_label := _label(HERO_ARCHETYPES[hero_archetype], Vector2(316, 324), Vector2(153, 34), 10, Color("#c49b80"))
 	class_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	class_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	ui_labels["hero_class"] = class_label
-	var armor_label := _label("ЦВЕТ: " + HERO_ARMOR_NAMES[hero_armor], Vector2(316, 359), Vector2(153, 24), 10, Color(HERO_ARMOR_COLORS[hero_armor]))
+	var armor_label := _label("ЦВЕТ: " + HERO_ARMOR_NAMES[hero_armor], Vector2(316, 360), Vector2(153, 20), 9, Color(HERO_ARMOR_COLORS[hero_armor]))
 	armor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ui_labels["hero_armor"] = armor_label
-	var edit_button := _button("ИЗМЕНИТЬ", Vector2(323, 391), Vector2(139, 30), false)
+	var edit_button := _button("ИЗМЕНИТЬ", Vector2(323, 390), Vector2(139, 30), false)
 	edit_button.add_theme_font_size_override("font_size", 10)
 	edit_button.pressed.connect(_open_hero_creator)
 
@@ -1242,6 +1254,8 @@ func _refresh_ui() -> void:
 	if ui_labels.has("hero_crest"):
 		ui_labels["hero_crest"].text = HERO_GLYPHS[hero_archetype]
 		ui_labels["hero_crest"].add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_armor]))
+		if ui_labels.has("hero_hud_art"):
+			ui_labels["hero_hud_art"].modulate = Color(HERO_ARMOR_COLORS[hero_armor]).lerp(Color.WHITE, 0.72)
 		ui_labels["hero_name"].text = hero_name
 		ui_labels["hero_class"].text = HERO_ARCHETYPES[hero_archetype]
 		ui_labels["hero_armor"].text = "ЦВЕТ: " + HERO_ARMOR_NAMES[hero_armor]
@@ -1573,23 +1587,32 @@ func _open_hero_creator() -> void:
 	portrait_glow.color = Color(HERO_ARMOR_COLORS[hero_draft_armor], 0.16)
 	portrait_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	hero_overlay.add_child(portrait_glow)
+	hero_preview_art = TextureRect.new()
+	hero_preview_art.position = Vector2(248, 132)
+	hero_preview_art.size = Vector2(230, 278)
+	hero_preview_art.texture = load("res://assets/hero_portrait.svg") as Texture2D
+	hero_preview_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	hero_preview_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	hero_preview_art.modulate = Color(HERO_ARMOR_COLORS[hero_draft_armor]).lerp(Color.WHITE, 0.72)
+	hero_preview_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_overlay.add_child(hero_preview_art)
 	hero_preview_glyph = Label.new()
-	hero_preview_glyph.position = Vector2(270, 166)
-	hero_preview_glyph.size = Vector2(185, 210)
+	hero_preview_glyph.position = Vector2(397, 147)
+	hero_preview_glyph.size = Vector2(54, 58)
 	hero_preview_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hero_preview_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hero_preview_glyph.add_theme_font_size_override("font_size", 104)
+	hero_preview_glyph.add_theme_font_size_override("font_size", 31)
 	hero_preview_glyph.add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_draft_armor]))
 	hero_overlay.add_child(hero_preview_glyph)
 	hero_preview_name = Label.new()
-	hero_preview_name.position = Vector2(252, 380)
+	hero_preview_name.position = Vector2(252, 404)
 	hero_preview_name.size = Vector2(222, 32)
 	hero_preview_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hero_preview_name.add_theme_font_size_override("font_size", 17)
 	hero_preview_name.add_theme_color_override("font_color", Color("#f2d6ac"))
 	hero_overlay.add_child(hero_preview_name)
 	hero_preview_class = Label.new()
-	hero_preview_class.position = Vector2(252, 415)
+	hero_preview_class.position = Vector2(252, 438)
 	hero_preview_class.size = Vector2(222, 48)
 	hero_preview_class.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	hero_preview_class.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -1598,7 +1621,7 @@ func _open_hero_creator() -> void:
 	hero_preview_class.add_theme_color_override("font_color", Color("#c49b80"))
 	hero_overlay.add_child(hero_preview_class)
 	var portrait_note := Label.new()
-	portrait_note.position = Vector2(252, 486)
+	portrait_note.position = Vector2(252, 494)
 	portrait_note.size = Vector2(222, 44)
 	portrait_note.text = "ОБЛИК НЕ ВЛИЯЕТ НА УРОН\nИ НЕ МЕНЯЕТ БАЛАНС."
 	portrait_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -1728,6 +1751,8 @@ func _refresh_hero_creator() -> void:
 		return
 	hero_preview_glyph.text = HERO_GLYPHS[hero_draft_archetype]
 	hero_preview_glyph.add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_draft_armor]))
+	if hero_preview_art != null and is_instance_valid(hero_preview_art):
+		hero_preview_art.modulate = Color(HERO_ARMOR_COLORS[hero_draft_armor]).lerp(Color.WHITE, 0.72)
 	hero_preview_name.text = hero_draft_name.strip_edges() if not hero_draft_name.strip_edges().is_empty() else "Безымянный кузнец"
 	hero_preview_class.text = HERO_ARCHETYPES[hero_draft_archetype] + "\n" + HERO_ARCHETYPE_DESC[hero_draft_archetype] + "\nДОСПЕХ: " + HERO_ARMOR_NAMES[hero_draft_armor]
 	for i in range(hero_class_buttons.size()):
@@ -1769,6 +1794,7 @@ func _close_hero_creator() -> void:
 		hero_overlay.queue_free()
 	hero_overlay = null
 	hero_name_input = null
+	hero_preview_art = null
 	hero_preview_glyph = null
 	hero_preview_name = null
 	hero_preview_class = null
