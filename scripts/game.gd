@@ -52,6 +52,7 @@ var journal_overlay: Control
 var story_button: Button
 var story_overlay: Control
 var hero_overlay: Control
+var rpg_character_overlay: Control
 var hero_name := "Безымянный кузнец"
 var hero_archetype := 0
 var hero_armor := 0
@@ -491,6 +492,9 @@ func _build_game_ui() -> void:
 	hero_button.add_theme_font_size_override("font_size", 12)
 	hero_button.pressed.connect(_open_hero_creator)
 	ui_labels["hero_button"] = hero_button
+	var character_button := _button("ПЕРСОНАЖ  ✦", Vector2(345, 68), Vector2(150, 30), false)
+	character_button.add_theme_font_size_override("font_size", 10)
+	character_button.pressed.connect(_open_rpg_character_panel)
 	ui_labels["energy"] = _label("ЭНЕРГИЯ  0", Vector2(820, 22), Vector2(210, 34), 20, Color("#f5c16e"))
 	ui_labels["rate"] = _label("0 / СЕК", Vector2(820, 55), Vector2(190, 22), 12, Color("#c08b65"))
 	ui_labels["stage"] = _label("МИР  01", Vector2(1050, 22), Vector2(190, 28), 17, Color("#f1dfc5"))
@@ -1269,6 +1273,196 @@ func _build_hero_hud() -> void:
 	edit_button.pressed.connect(_open_hero_creator)
 
 
+func _open_rpg_character_panel() -> void:
+	if rpg_character_overlay != null and is_instance_valid(rpg_character_overlay):
+		return
+	rpg_character_overlay = Control.new()
+	rpg_character_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	rpg_character_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	rpg_character_overlay.z_index = 130
+	add_child(rpg_character_overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.012, 0.006, 0.018, 0.94)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	rpg_character_overlay.add_child(dim)
+
+	var frame := Panel.new()
+	frame.position = Vector2(205, 44)
+	frame.size = Vector2(870, 632)
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color("#100b13")
+	frame_style.border_color = Color("#b87949")
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(14)
+	frame_style.shadow_color = Color(0, 0, 0, 0.75)
+	frame_style.shadow_size = 22
+	frame.add_theme_stylebox_override("panel", frame_style)
+	rpg_character_overlay.add_child(frame)
+
+	var title := _character_panel_label("ПЕРСОНАЖ", Vector2(245, 60), Vector2(560, 38), 25, Color("#f2d6ac"))
+	rpg_character_overlay.add_child(title)
+	var subtitle := _character_panel_label("ПУТЬ ГЕРОЯ  •  СНАРЯЖЕНИЕ  •  БОЕВЫЕ НАВЫКИ", Vector2(247, 98), Vector2(610, 22), 11, Color("#c49b80"))
+	rpg_character_overlay.add_child(subtitle)
+
+	var close := _hero_overlay_button("✕", Vector2(972, 56), Vector2(56, 42), false)
+	close.add_theme_font_size_override("font_size", 19)
+	close.pressed.connect(_close_rpg_character_panel)
+	rpg_character_overlay.add_child(close)
+
+	var portrait_panel := Panel.new()
+	portrait_panel.position = Vector2(238, 137)
+	portrait_panel.size = Vector2(260, 360)
+	var portrait_style := StyleBoxFlat.new()
+	portrait_style.bg_color = Color("#171019")
+	portrait_style.border_color = Color("#69402f")
+	portrait_style.set_border_width_all(1)
+	portrait_style.set_corner_radius_all(12)
+	portrait_panel.add_theme_stylebox_override("panel", portrait_style)
+	rpg_character_overlay.add_child(portrait_panel)
+
+	var portrait_glow := ColorRect.new()
+	portrait_glow.position = Vector2(286, 174)
+	portrait_glow.size = Vector2(164, 164)
+	portrait_glow.color = Color(HERO_ARMOR_COLORS[hero_armor], 0.16)
+	portrait_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rpg_character_overlay.add_child(portrait_glow)
+	var portrait := TextureRect.new()
+	portrait.position = Vector2(250, 137)
+	portrait.size = Vector2(236, 270)
+	portrait.texture = load("res://assets/hero_portrait.svg") as Texture2D
+	portrait.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	portrait.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	portrait.modulate = Color(HERO_ARMOR_COLORS[hero_armor]).lerp(Color.WHITE, 0.72)
+	portrait.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rpg_character_overlay.add_child(portrait)
+	var crest := _character_panel_label(HERO_GLYPHS[hero_archetype], Vector2(420, 150), Vector2(55, 58), 30, Color(HERO_ARMOR_COLORS[hero_armor]))
+	crest.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rpg_character_overlay.add_child(crest)
+	var name_label := _character_panel_label(hero_name, Vector2(252, 400), Vector2(232, 30), 16, Color("#f2d6ac"))
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rpg_character_overlay.add_child(name_label)
+	var class_label := _character_panel_label(HERO_ARCHETYPES[hero_archetype], Vector2(252, 432), Vector2(232, 24), 10, Color("#c49b80"))
+	class_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rpg_character_overlay.add_child(class_label)
+	var armor_label := _character_panel_label("ДОСПЕХ: " + HERO_ARMOR_NAMES[hero_armor], Vector2(252, 458), Vector2(232, 20), 10, Color(HERO_ARMOR_COLORS[hero_armor]))
+	armor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	rpg_character_overlay.add_child(armor_label)
+	var edit_appearance := _hero_overlay_button("ИЗМЕНИТЬ ОБЛИК", Vector2(272, 517), Vector2(192, 40), false)
+	edit_appearance.add_theme_font_size_override("font_size", 11)
+	edit_appearance.pressed.connect(_edit_appearance_from_character_panel)
+	rpg_character_overlay.add_child(edit_appearance)
+
+	var level_label := _character_panel_label("УРОВЕНЬ  01", Vector2(530, 139), Vector2(210, 32), 20, Color("#f2c27b"))
+	rpg_character_overlay.add_child(level_label)
+	var rank_label := _character_panel_label("НОВИЧОК КУЗНИ", Vector2(740, 145), Vector2(205, 22), 11, Color("#c49b80"))
+	rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	rpg_character_overlay.add_child(rank_label)
+
+	var xp_label := _character_panel_label("ОПЫТ  0 / 100", Vector2(530, 181), Vector2(390, 20), 11, Color("#d8b68c"))
+	rpg_character_overlay.add_child(xp_label)
+	var xp_track := ColorRect.new()
+	xp_track.position = Vector2(530, 205)
+	xp_track.size = Vector2(410, 8)
+	xp_track.color = Color("#39232d")
+	xp_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rpg_character_overlay.add_child(xp_track)
+	var xp_fill := ColorRect.new()
+	xp_fill.position = xp_track.position
+	xp_fill.size = Vector2(0, 8)
+	xp_fill.color = Color("#e6a45d")
+	xp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rpg_character_overlay.add_child(xp_fill)
+
+	var hp_label := _character_panel_label("ЗДОРОВЬЕ  100 / 100", Vector2(530, 226), Vector2(390, 20), 11, Color("#dba29a"))
+	rpg_character_overlay.add_child(hp_label)
+	var hp_track := ColorRect.new()
+	hp_track.position = Vector2(530, 250)
+	hp_track.size = Vector2(410, 8)
+	hp_track.color = Color("#39232d")
+	hp_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rpg_character_overlay.add_child(hp_track)
+	var hp_fill := ColorRect.new()
+	hp_fill.position = hp_track.position
+	hp_fill.size = Vector2(410, 8)
+	hp_fill.color = Color("#a94345")
+	hp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rpg_character_overlay.add_child(hp_fill)
+
+	var equipment_title := _character_panel_label("ЭКИПИРОВКА", Vector2(530, 279), Vector2(400, 24), 14, Color("#f2d6ac"))
+	rpg_character_overlay.add_child(equipment_title)
+	var equipment_names := ["ОРУЖИЕ", "ШЛЕМ", "БРОНЯ", "РЕЛИКВИЯ"]
+	var equipment_glyphs := ["⚔", "⌑", "⬟", "✦"]
+	for i in range(equipment_names.size()):
+		var col := i % 2
+		var row := int(i / 2)
+		var slot := Panel.new()
+		slot.position = Vector2(530 + col * 211, 309 + row * 62)
+		slot.size = Vector2(199, 54)
+		var slot_style := StyleBoxFlat.new()
+		slot_style.bg_color = Color("#19121b")
+		slot_style.border_color = Color("#59404a")
+		slot_style.set_border_width_all(1)
+		slot_style.set_corner_radius_all(7)
+		slot.add_theme_stylebox_override("panel", slot_style)
+		rpg_character_overlay.add_child(slot)
+		var glyph := _character_panel_label(equipment_glyphs[i], Vector2(540 + col * 211, 315 + row * 62), Vector2(36, 36), 21, Color("#c49b80"))
+		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rpg_character_overlay.add_child(glyph)
+		var slot_name := _character_panel_label(equipment_names[i], Vector2(580 + col * 211, 316 + row * 62), Vector2(138, 18), 9, Color("#c49b80"))
+		rpg_character_overlay.add_child(slot_name)
+		var slot_status := _character_panel_label("ПУСТОЙ СЛОТ", Vector2(580 + col * 211, 336 + row * 62), Vector2(138, 16), 9, Color("#796872"))
+		rpg_character_overlay.add_child(slot_status)
+
+	var skills_title := _character_panel_label("НАВЫКИ", Vector2(530, 445), Vector2(400, 22), 14, Color("#f2d6ac"))
+	rpg_character_overlay.add_child(skills_title)
+	var skill_names := ["РУНОУДАР", "ПЛАМЯ ДУШИ", "РАЗЛОМ"]
+	var skill_glyphs := ["ᚱ", "♨", "✧"]
+	for i in range(skill_names.size()):
+		var col_x := 530 + i * 138
+		var skill_slot := Panel.new()
+		skill_slot.position = Vector2(col_x, 471)
+		skill_slot.size = Vector2(126, 66)
+		var skill_style := StyleBoxFlat.new()
+		skill_style.bg_color = Color("#19121b")
+		skill_style.border_color = Color("#59404a")
+		skill_style.set_border_width_all(1)
+		skill_style.set_corner_radius_all(7)
+		skill_slot.add_theme_stylebox_override("panel", skill_style)
+		rpg_character_overlay.add_child(skill_slot)
+		var skill_glyph := _character_panel_label(skill_glyphs[i], Vector2(col_x + 4, 474), Vector2(118, 30), 20, Color("#8b6db1"))
+		skill_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rpg_character_overlay.add_child(skill_glyph)
+		var skill_name := _character_panel_label(skill_names[i], Vector2(col_x + 3, 507), Vector2(120, 18), 8, Color("#a58b91"))
+		skill_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rpg_character_overlay.add_child(skill_name)
+
+	var note := _character_panel_label("ВИЗУАЛЬНЫЙ ПРОТОТИП  •  СНАРЯЖЕНИЕ И НАВЫКИ ПОКА НЕ ВЛИЯЮТ НА БОЙ", Vector2(530, 565), Vector2(410, 26), 9, Color("#8d777d"))
+	rpg_character_overlay.add_child(note)
+
+
+func _character_panel_label(text_value: String, pos: Vector2, label_size: Vector2, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.position = pos
+	label.size = label_size
+	label.text = text_value
+	label.add_theme_font_size_override("font_size", font_size)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+func _close_rpg_character_panel() -> void:
+	if rpg_character_overlay != null and is_instance_valid(rpg_character_overlay):
+		rpg_character_overlay.queue_free()
+	rpg_character_overlay = null
+
+
+func _edit_appearance_from_character_panel() -> void:
+	_close_rpg_character_panel()
+	_open_hero_creator()
+
+
 func _refresh_ui() -> void:
 	if not playing:
 		return
@@ -1872,6 +2066,7 @@ func _clear_ui() -> void:
 	journal_overlay = null
 	story_overlay = null
 	hero_overlay = null
+	rpg_character_overlay = null
 	hero_name_input = null
 	hero_preview_glyph = null
 	hero_preview_name = null
