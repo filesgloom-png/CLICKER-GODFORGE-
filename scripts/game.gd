@@ -507,6 +507,7 @@ func _build_game_ui() -> void:
 	boss_bar.add_theme_stylebox_override("background", bg)
 	add_child(boss_bar)
 	ui_labels["boss_fill_style"] = fill
+	var phase_markers: Array[ColorRect] = []
 	for marker_index in range(1, 4):
 		var hp_marker := ColorRect.new()
 		hp_marker.position = Vector2(968.0 + 255.0 * float(marker_index) / 4.0 - 1.0, 208.0)
@@ -514,6 +515,8 @@ func _build_game_ui() -> void:
 		hp_marker.color = Color("#512832")
 		hp_marker.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		add_child(hp_marker)
+		phase_markers.append(hp_marker)
+	ui_labels["boss_phase_markers"] = phase_markers
 	ui_labels["boss_hp"] = _label("500 / 500 ОЗ", Vector2(968, 232), Vector2(255, 22), 12, Color("#d8b9a8"))
 	ui_labels["boss_phase"] = _label("ФАЗА I  •  100% ОСТАЛОСЬ", Vector2(968, 253), Vector2(255, 18), 10, Color("#d5a77a"))
 	ui_labels["boss_threat"] = _label("УГРОЗА: НИЗКАЯ", Vector2(968, 273), Vector2(255, 18), 10, Color("#d5a77a"))
@@ -860,7 +863,16 @@ func _strike_core() -> void:
 	combo_time = 1.5
 	if ui_labels.has("combo"):
 		ui_labels["combo"].text = "СЕРИЯ УДАРОВ  ×%d" % combo_count if combo_count > 1 else "ПЕРВЫЙ УДАР СЕРИИ"
-		ui_labels["combo"].add_theme_color_override("font_color", Color("#ffe6a0") if combo_count >= 10 else Color("#e5bd7e"))
+		var combo_color := Color("#e5bd7e")
+		if combo_count >= 100:
+			combo_color = Color("#fff0a3")
+		elif combo_count >= 50:
+			combo_color = Color("#ffb56b")
+		elif combo_count >= 25:
+			combo_color = Color("#f2c27b")
+		elif combo_count >= 10:
+			combo_color = Color("#ffe6a0")
+		ui_labels["combo"].add_theme_color_override("font_color", combo_color)
 	_check_achievements()
 	hit_flash = 1.0
 	core_recoil = 1.0
@@ -890,10 +902,17 @@ func _strike_core() -> void:
 	boss_shake = 1.0
 	combat_popups.append({"text": ("КРИТ!  −" if critical else "−") + _format_number(boss_hit_damage), "position": Vector2(862.0 + rng.randf_range(-24.0, 24.0), 286.0), "life": 1.0, "size": 23 if critical else 18, "color": Color("#ffe28b") if critical else Color("#ff8c72")})
 	combat_popups.append({"text": "+" + _format_number(damage) + " ЭНЕРГИИ", "position": Vector2(640.0 + rng.randf_range(-20.0, 20.0), 284.0), "life": 0.82, "size": 15, "color": Color("#ffc879")})
-	if combo_count in [10, 25, 50, 100]:
+	if combo_count in [10, 25, 50, 100, 250, 500, 1000]:
 		var combo_title := "СЕРИЯ  %d УДАРОВ!" % combo_count
-		combat_popups.append({"text": combo_title, "position": Vector2(640.0, 250.0), "life": 1.25, "size": 20, "color": Color("#ffe6a0")})
-		critical_flash = maxf(critical_flash, 0.35)
+		var combo_tier_color := Color("#ffe6a0") if combo_count < 50 else (Color("#ffb56b") if combo_count < 250 else Color("#ff795f"))
+		var combo_popup_size := 20 if combo_count < 100 else (23 if combo_count < 500 else 27)
+		combat_popups.append({"text": combo_title, "position": Vector2(640.0, 250.0), "life": 1.35, "size": combo_popup_size, "color": combo_tier_color})
+		critical_flash = maxf(critical_flash, 0.35 if combo_count < 100 else 0.5)
+		for particle_index in range(18 if combo_count < 100 else 32):
+			var burst_angle := rng.randf_range(0.0, TAU)
+			var burst_speed := rng.randf_range(90.0, 260.0)
+			var burst_origin := Vector2(640.0, 345.0) + Vector2(cos(burst_angle), sin(burst_angle)) * rng.randf_range(35.0, 58.0)
+			ember_particles.append(Vector4(burst_origin.x, burst_origin.y, cos(burst_angle) * burst_speed, sin(burst_angle) * burst_speed))
 	if ui_labels.has("hit"):
 		ui_labels["hit"].text = ("КРИТИЧЕСКИЙ УДАР!  +" if critical else "УДАР ПО ЯДРУ  +") + _format_number(damage)
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
@@ -1004,6 +1023,14 @@ func _refresh_ui() -> void:
 		var phase_progress := clampf((hp_ratio - phase_start) / maxf(phase_end - phase_start, 0.001), 0.0, 1.0)
 		phase_label.text = "ФАЗА %s  •  %d%% ДО СМЕНЫ" % [_roman_phase(phase_number), int(round(phase_progress * 100.0))]
 		phase_label.add_theme_color_override("font_color", Color("#ff715c") if phase_number >= 4 else (Color("#e6a45d") if phase_number >= 3 else Color("#d5a77a")))
+		var phase_markers: Array = ui_labels["boss_phase_markers"]
+		for marker_index in range(phase_markers.size()):
+			var marker: ColorRect = phase_markers[marker_index]
+			var threshold := 0.75 - float(marker_index) * 0.25
+			var marker_crossed := hp_ratio <= threshold
+			var marker_active := absf(hp_ratio - threshold) <= 0.035
+			marker.color = Color("#ff795f") if marker_active else (Color("#e6a45d") if marker_crossed else Color("#512832"))
+			marker.size.x = 3.0 if marker_active else 2.0
 		var threat_label: Label = ui_labels["boss_threat"]
 		if hp_ratio <= 0.2:
 			threat_label.text = "УГРОЗА: КРИТИЧЕСКАЯ"
