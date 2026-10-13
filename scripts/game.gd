@@ -1374,25 +1374,50 @@ func _open_rpg_character_panel() -> void:
 	rpg_character_overlay.add_child(equipment_title)
 	var equipment_names := ["ОРУЖИЕ", "ШЛЕМ", "БРОНЯ", "РЕЛИКВИЯ"]
 	var equipment_glyphs := ["⚔", "⌑", "⬟", "✦"]
+	var equipment_rarity_names := ["ОБЫЧНЫЙ", "НЕОБЫЧНЫЙ", "РЕДКИЙ", "ЭПИЧЕСКИЙ"]
+	var equipment_rarity_colors := [Color("#9a8b94"), Color("#6dc7a4"), Color("#6e9cff"), Color("#bd83f2")]
 	for i in range(equipment_names.size()):
 		var col := i % 2
 		var row := int(i / 2)
+		var slot_pos := Vector2(530 + col * 211, 309 + row * 62)
 		var slot := Panel.new()
-		slot.position = Vector2(530 + col * 211, 309 + row * 62)
+		slot.position = slot_pos
 		slot.size = Vector2(199, 54)
+		var rarity_color: Color = equipment_rarity_colors[i]
 		var slot_style := StyleBoxFlat.new()
-		slot_style.bg_color = Color("#19121b")
-		slot_style.border_color = Color("#59404a")
+		slot_style.bg_color = Color("#17111b")
+		slot_style.border_color = rarity_color.darkened(0.25)
 		slot_style.set_border_width_all(1)
-		slot_style.set_corner_radius_all(7)
+		slot_style.set_corner_radius_all(8)
+		slot_style.shadow_color = Color(rarity_color, 0.16)
+		slot_style.shadow_size = 5
 		slot.add_theme_stylebox_override("panel", slot_style)
 		rpg_character_overlay.add_child(slot)
-		var glyph := _character_panel_label(equipment_glyphs[i], Vector2(540 + col * 211, 315 + row * 62), Vector2(36, 36), 21, Color("#c49b80"))
+		var rarity_strip := ColorRect.new()
+		rarity_strip.position = slot_pos + Vector2(1, 7)
+		rarity_strip.size = Vector2(3, 40)
+		rarity_strip.color = rarity_color
+		rarity_strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		rpg_character_overlay.add_child(rarity_strip)
+		var icon_back := Panel.new()
+		icon_back.position = slot_pos + Vector2(9, 8)
+		icon_back.size = Vector2(38, 38)
+		var icon_style := StyleBoxFlat.new()
+		icon_style.bg_color = Color(rarity_color, 0.12)
+		icon_style.border_color = Color(rarity_color, 0.72)
+		icon_style.set_border_width_all(1)
+		icon_style.set_corner_radius_all(7)
+		icon_back.add_theme_stylebox_override("panel", icon_style)
+		rpg_character_overlay.add_child(icon_back)
+		var glyph := _character_panel_label(equipment_glyphs[i], slot_pos + Vector2(10, 8), Vector2(36, 36), 21, rarity_color)
 		glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		rpg_character_overlay.add_child(glyph)
-		var slot_name := _character_panel_label(equipment_names[i], Vector2(580 + col * 211, 316 + row * 62), Vector2(138, 18), 9, Color("#c49b80"))
+		var slot_name := _character_panel_label(equipment_names[i], slot_pos + Vector2(54, 5), Vector2(132, 18), 9, Color("#f0dfd0"))
 		rpg_character_overlay.add_child(slot_name)
-		var slot_status := _character_panel_label("ПУСТОЙ СЛОТ", Vector2(580 + col * 211, 336 + row * 62), Vector2(138, 16), 9, Color("#796872"))
+		var rarity_label := _character_panel_label("ШАБЛОН: " + equipment_rarity_names[i], slot_pos + Vector2(54, 22), Vector2(137, 13), 8, rarity_color)
+		rpg_character_overlay.add_child(rarity_label)
+		var slot_status := _character_panel_label("ПУСТОЙ СЛОТ", slot_pos + Vector2(54, 36), Vector2(132, 13), 8, Color("#796872"))
 		rpg_character_overlay.add_child(slot_status)
 		var slot_button := Button.new()
 		slot_button.position = slot.position
@@ -1403,15 +1428,15 @@ func _open_rpg_character_panel() -> void:
 		slot_idle.bg_color = Color(0, 0, 0, 0)
 		slot_idle.border_color = Color(0, 0, 0, 0)
 		slot_idle.set_border_width_all(0)
-		slot_idle.set_corner_radius_all(7)
+		slot_idle.set_corner_radius_all(8)
 		var slot_hover := slot_idle.duplicate() as StyleBoxFlat
-		slot_hover.bg_color = Color(0.9, 0.55, 0.25, 0.07)
-		slot_hover.border_color = Color("#c49b80")
+		slot_hover.bg_color = Color(rarity_color, 0.08)
+		slot_hover.border_color = rarity_color
 		slot_hover.set_border_width_all(1)
 		slot_button.add_theme_stylebox_override("normal", slot_idle)
 		slot_button.add_theme_stylebox_override("hover", slot_hover)
 		slot_button.add_theme_stylebox_override("pressed", slot_hover)
-		slot_button.pressed.connect(_open_rpg_detail_card.bind(equipment_names[i], "СЛОТ ЭКИПИРОВКИ", equipment_glyphs[i], Color("#e6a45d"), "Здесь будет предмет категории «%s».\n\nСистема экипировки пока находится в разработке. Этот просмотр не меняет характеристики героя, урон или сохранение." % equipment_names[i]))
+		slot_button.pressed.connect(_open_rpg_detail_card.bind(equipment_names[i], "СЛОТ ЭКИПИРОВКИ • ДЕМО-РАНГ " + equipment_rarity_names[i], equipment_glyphs[i], rarity_color, "Здесь будет предмет категории «%s».\n\nЦвет и ранг показаны только как визуальный образец редкости. Слот пустой; система экипировки ещё не подключена и не меняет характеристики героя, урон или сохранение." % equipment_names[i]))
 		rpg_character_overlay.add_child(slot_button)
 
 	var skills_title := _character_panel_label("НАВЫКИ", Vector2(530, 445), Vector2(400, 22), 14, Color("#f2d6ac"))
