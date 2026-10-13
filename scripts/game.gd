@@ -6,6 +6,11 @@ const UPGRADE_DESC := ["Больше силы с каждого удара", "П
 const UPGRADE_BASE_COST := [25.0, 80.0, 180.0, 320.0]
 const BOSS_NAMES := ["ПОЛЫЙ ТИТАН", "ПЕПЕЛЬНЫЙ ЗМЕЙ", "КОРОЛЕВА ПЕЛЕНЫ", "ЖЕЛЕЗНЫЙ СВЯТОЙ"]
 const UPGRADE_GLYPHS := ["⚒", "◉", "ᚱ", "✦"]
+const HERO_ARCHETYPES := ["ПЕПЕЛЬНЫЙ РЫЦАРЬ", "РУНОКОВ", "ОХОТНИК ПЕЛЕНЫ", "СТРАЖ ПУСТОТЫ"]
+const HERO_ARCHETYPE_DESC := ["Тяжёлая броня и клятва у Кузни.", "Знаки древних мастеров горят на перчатках.", "Лёгкий силуэт, плащ и охота на титанов.", "Чёрный доспех того, кто вернулся из бездны."]
+const HERO_GLYPHS := ["⚔", "ᚱ", "➶", "✦"]
+const HERO_ARMOR_COLORS := ["#b45b43", "#4e8f91", "#8b6db1", "#c49a55"]
+const HERO_ARMOR_NAMES := ["ПЕПЕЛ", "БИРЮЗА", "СУМРАК", "ЗОЛОТО"]
 
 var rng := RandomNumberGenerator.new()
 var stars: Array[Vector3] = []
@@ -46,6 +51,19 @@ var journal_button: Button
 var journal_overlay: Control
 var story_button: Button
 var story_overlay: Control
+var hero_overlay: Control
+var hero_name := "Безымянный кузнец"
+var hero_archetype := 0
+var hero_armor := 0
+var hero_draft_name := "Безымянный кузнец"
+var hero_draft_archetype := 0
+var hero_draft_armor := 0
+var hero_name_input: LineEdit
+var hero_preview_glyph: Label
+var hero_preview_name: Label
+var hero_preview_class: Label
+var hero_class_buttons: Array[Button] = []
+var hero_color_buttons: Array[Button] = []
 var total_clicks := 0
 var total_upgrades := 0
 var boss_victories := 0
@@ -447,10 +465,13 @@ func _show_title() -> void:
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	var note := _label("ТЁМНОЕ ФЭНТЕЗИ  •  РАЗВИТИЕ В ПРОСТОЕ  •  БОССЫ-ТИТАНЫ", Vector2(0, 475), Vector2(1280, 30), 13, Color("#b36d4b"))
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var begin := _button("НАЧАТЬ ВОСХОЖДЕНИЕ", Vector2(465, 535), Vector2(350, 66), true)
-	begin.add_theme_font_size_override("font_size", 20)
+	var hero_setup := _button("✦  СОЗДАТЬ СВОЕГО ГЕРОЯ", Vector2(465, 515), Vector2(350, 48), false)
+	hero_setup.add_theme_font_size_override("font_size", 15)
+	hero_setup.pressed.connect(_open_hero_creator)
+	var begin := _button("НАЧАТЬ ВОСХОЖДЕНИЕ", Vector2(465, 575), Vector2(350, 58), true)
+	begin.add_theme_font_size_override("font_size", 19)
 	begin.pressed.connect(_start_game)
-	var hint := _label("БЕЙ ПО ЯДРУ  •  УЛУЧШАЙ КУЗНЮ  •  ПОБЕЖДАЙ ТИТАНОВ", Vector2(0, 620), Vector2(1280, 24), 11, Color("#786b75"))
+	var hint := _label("БЕЙ ПО ЯДРУ  •  УЛУЧШАЙ КУЗНЮ  •  ПОБЕЖДАЙ ТИТАНОВ", Vector2(0, 650), Vector2(1280, 24), 11, Color("#786b75"))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 
 func _start_game() -> void:
@@ -461,7 +482,11 @@ func _start_game() -> void:
 func _build_game_ui() -> void:
 	_clear_ui()
 	var logo := _label("✦  КУЗНЯ БОГОВ", Vector2(32, 18), Vector2(300, 44), 24, Color("#f2d6ac"))
-	_label("ПЕПЕЛЬНОЕ СВЯТИЛИЩЕ  /  МИР %02d" % boss_stage, Vector2(34, 61), Vector2(380, 22), 11, Color("#a97b66"))
+	_label("ПЕПЕЛЬНОЕ СВЯТИЛИЩЕ  /  МИР %02d" % boss_stage, Vector2(34, 61), Vector2(290, 22), 11, Color("#a97b66"))
+	var hero_button := _button("ГЕРОЙ", Vector2(345, 22), Vector2(150, 42), false)
+	hero_button.add_theme_font_size_override("font_size", 12)
+	hero_button.pressed.connect(_open_hero_creator)
+	ui_labels["hero_button"] = hero_button
 	ui_labels["energy"] = _label("ЭНЕРГИЯ  0", Vector2(820, 22), Vector2(210, 34), 20, Color("#f5c16e"))
 	ui_labels["rate"] = _label("0 / СЕК", Vector2(820, 55), Vector2(190, 22), 12, Color("#c08b65"))
 	ui_labels["stage"] = _label("МИР  01", Vector2(1050, 22), Vector2(190, 28), 17, Color("#f1dfc5"))
@@ -1188,6 +1213,9 @@ func _refresh_ui() -> void:
 	if story_button != null and is_instance_valid(story_button):
 		var chapters := _story_chapters()
 		story_button.text = "ХРОНИКИ  •  ГЛАВА %d/%d" % [_current_story_chapter() + 1, chapters.size()]
+	if ui_labels.has("hero_button"):
+		var hero_button: Button = ui_labels["hero_button"]
+		hero_button.text = "ГЕРОЙ  •  " + hero_name.left(8)
 	if ui_labels.has("energy"):
 		ui_labels["energy"].text = "ЭНЕРГИЯ  " + _format_number(energy)
 		ui_labels["energy"].add_theme_color_override("font_color", Color("#fff0a3").lerp(Color("#f5c16e"), 1.0 - energy_flash))
@@ -1426,6 +1454,279 @@ func _label(value: String, pos: Vector2, size: Vector2, font_size: int, color: C
 	add_child(label)
 	return label
 
+
+func _open_hero_creator() -> void:
+	if hero_overlay != null and is_instance_valid(hero_overlay):
+		return
+	hero_draft_name = hero_name
+	hero_draft_archetype = hero_archetype
+	hero_draft_armor = hero_armor
+	hero_class_buttons.clear()
+	hero_color_buttons.clear()
+	hero_overlay = Control.new()
+	hero_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	hero_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	hero_overlay.z_index = 140
+	add_child(hero_overlay)
+
+	var dim := ColorRect.new()
+	dim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dim.color = Color(0.012, 0.006, 0.018, 0.94)
+	dim.mouse_filter = Control.MOUSE_FILTER_STOP
+	hero_overlay.add_child(dim)
+
+	var frame := Panel.new()
+	frame.position = Vector2(205, 34)
+	frame.size = Vector2(870, 652)
+	var frame_style := StyleBoxFlat.new()
+	frame_style.bg_color = Color("#100b13")
+	frame_style.border_color = Color("#b87949")
+	frame_style.set_border_width_all(2)
+	frame_style.set_corner_radius_all(14)
+	frame_style.shadow_color = Color(0, 0, 0, 0.75)
+	frame_style.shadow_size = 22
+	frame.add_theme_stylebox_override("panel", frame_style)
+	hero_overlay.add_child(frame)
+
+	var title := Label.new()
+	title.position = Vector2(245, 52)
+	title.size = Vector2(670, 38)
+	title.text = "СОЗДАНИЕ ГЕРОЯ"
+	title.add_theme_font_size_override("font_size", 25)
+	title.add_theme_color_override("font_color", Color("#f2d6ac"))
+	hero_overlay.add_child(title)
+	var subtitle := Label.new()
+	subtitle.position = Vector2(247, 91)
+	subtitle.size = Vector2(680, 24)
+	subtitle.text = "ТВОЁ ИМЯ. ТВОЙ ОБЛИК. ТВОЯ ЛЕГЕНДА."
+	subtitle.add_theme_font_size_override("font_size", 12)
+	subtitle.add_theme_color_override("font_color", Color("#c49b80"))
+	hero_overlay.add_child(subtitle)
+
+	var close := _hero_overlay_button("✕", Vector2(972, 48), Vector2(56, 42), false)
+	close.add_theme_font_size_override("font_size", 19)
+	close.pressed.connect(_close_hero_creator)
+	hero_overlay.add_child(close)
+
+	var portrait_panel := Panel.new()
+	portrait_panel.position = Vector2(238, 132)
+	portrait_panel.size = Vector2(250, 420)
+	var portrait_style := StyleBoxFlat.new()
+	portrait_style.bg_color = Color("#171019")
+	portrait_style.border_color = Color("#69402f")
+	portrait_style.set_border_width_all(1)
+	portrait_style.set_corner_radius_all(12)
+	portrait_panel.add_theme_stylebox_override("panel", portrait_style)
+	hero_overlay.add_child(portrait_panel)
+
+	var portrait_glow := ColorRect.new()
+	portrait_glow.position = Vector2(282, 188)
+	portrait_glow.size = Vector2(160, 160)
+	portrait_glow.color = Color(HERO_ARMOR_COLORS[hero_draft_armor], 0.16)
+	portrait_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hero_overlay.add_child(portrait_glow)
+	hero_preview_glyph = Label.new()
+	hero_preview_glyph.position = Vector2(270, 166)
+	hero_preview_glyph.size = Vector2(185, 210)
+	hero_preview_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_preview_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hero_preview_glyph.add_theme_font_size_override("font_size", 104)
+	hero_preview_glyph.add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_draft_armor]))
+	hero_overlay.add_child(hero_preview_glyph)
+	hero_preview_name = Label.new()
+	hero_preview_name.position = Vector2(252, 380)
+	hero_preview_name.size = Vector2(222, 32)
+	hero_preview_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_preview_name.add_theme_font_size_override("font_size", 17)
+	hero_preview_name.add_theme_color_override("font_color", Color("#f2d6ac"))
+	hero_overlay.add_child(hero_preview_name)
+	hero_preview_class = Label.new()
+	hero_preview_class.position = Vector2(252, 415)
+	hero_preview_class.size = Vector2(222, 48)
+	hero_preview_class.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	hero_preview_class.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	hero_preview_class.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	hero_preview_class.add_theme_font_size_override("font_size", 11)
+	hero_preview_class.add_theme_color_override("font_color", Color("#c49b80"))
+	hero_overlay.add_child(hero_preview_class)
+	var portrait_note := Label.new()
+	portrait_note.position = Vector2(252, 486)
+	portrait_note.size = Vector2(222, 44)
+	portrait_note.text = "ОБЛИК НЕ ВЛИЯЕТ НА УРОН\nИ НЕ МЕНЯЕТ БАЛАНС."
+	portrait_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	portrait_note.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	portrait_note.add_theme_font_size_override("font_size", 10)
+	portrait_note.add_theme_color_override("font_color", Color("#8d777d"))
+	hero_overlay.add_child(portrait_note)
+
+	var name_label := Label.new()
+	name_label.position = Vector2(525, 132)
+	name_label.size = Vector2(430, 24)
+	name_label.text = "ИМЯ ГЕРОЯ"
+	name_label.add_theme_font_size_override("font_size", 12)
+	name_label.add_theme_color_override("font_color", Color("#e7c9a5"))
+	hero_overlay.add_child(name_label)
+	hero_name_input = LineEdit.new()
+	hero_name_input.position = Vector2(525, 160)
+	hero_name_input.size = Vector2(430, 42)
+	hero_name_input.text = hero_draft_name
+	hero_name_input.max_length = 20
+	hero_name_input.placeholder_text = "Например, Последний кузнец"
+	hero_name_input.clear_button_enabled = true
+	hero_name_input.add_theme_font_size_override("font_size", 16)
+	hero_name_input.add_theme_color_override("font_color", Color("#f2e4d1"))
+	var input_style := StyleBoxFlat.new()
+	input_style.bg_color = Color("#21151b")
+	input_style.border_color = Color("#8b5439")
+	input_style.set_border_width_all(1)
+	input_style.set_corner_radius_all(8)
+	input_style.content_margin_left = 12
+	input_style.content_margin_right = 12
+	hero_name_input.add_theme_stylebox_override("normal", input_style)
+	hero_name_input.text_changed.connect(_on_hero_name_changed)
+	hero_overlay.add_child(hero_name_input)
+
+	var class_label := Label.new()
+	class_label.position = Vector2(525, 215)
+	class_label.size = Vector2(430, 24)
+	class_label.text = "ПУТЬ ГЕРОЯ  •  ВЫБЕРИ СВОЙ ОБЛИК"
+	class_label.add_theme_font_size_override("font_size", 12)
+	class_label.add_theme_color_override("font_color", Color("#e7c9a5"))
+	hero_overlay.add_child(class_label)
+	for i in range(HERO_ARCHETYPES.size()):
+		var col := i % 2
+		var row := i / 2
+		var class_button := _hero_overlay_button("%s  %s" % [HERO_GLYPHS[i], HERO_ARCHETYPES[i]], Vector2(525 + col * 220, 245 + row * 68), Vector2(210, 58), i == hero_draft_archetype)
+		class_button.add_theme_font_size_override("font_size", 11)
+		class_button.pressed.connect(_select_hero_archetype.bind(i))
+		hero_class_buttons.append(class_button)
+		hero_overlay.add_child(class_button)
+
+	var armor_label := Label.new()
+	armor_label.position = Vector2(525, 390)
+	armor_label.size = Vector2(430, 24)
+	armor_label.text = "ЦВЕТ ДОСПЕХА"
+	armor_label.add_theme_font_size_override("font_size", 12)
+	armor_label.add_theme_color_override("font_color", Color("#e7c9a5"))
+	hero_overlay.add_child(armor_label)
+	for i in range(HERO_ARMOR_COLORS.size()):
+		var color_button := _hero_overlay_button(HERO_ARMOR_NAMES[i], Vector2(525 + i * 110, 420), Vector2(100, 44), i == hero_draft_armor)
+		color_button.add_theme_font_size_override("font_size", 10)
+		color_button.add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[i]))
+		hero_color_buttons.append(color_button)
+		color_button.pressed.connect(_select_hero_armor.bind(i))
+		hero_overlay.add_child(color_button)
+
+	var save_hint := Label.new()
+	save_hint.position = Vector2(525, 488)
+	save_hint.size = Vector2(430, 48)
+	save_hint.text = "ПРОФИЛЬ СОХРАНИТСЯ НА УСТРОЙСТВЕ.\nИМЯ, ПУТЬ И ЦВЕТ МОЖНО ИЗМЕНИТЬ ПОЗЖЕ."
+	save_hint.add_theme_font_size_override("font_size", 10)
+	save_hint.add_theme_color_override("font_color", Color("#9c8180"))
+	hero_overlay.add_child(save_hint)
+
+	var cancel := _hero_overlay_button("ОТМЕНА", Vector2(525, 590), Vector2(150, 48), false)
+	cancel.pressed.connect(_close_hero_creator)
+	hero_overlay.add_child(cancel)
+	var save := _hero_overlay_button("СОХРАНИТЬ ГЕРОЯ", Vector2(695, 590), Vector2(260, 48), true)
+	save.add_theme_font_size_override("font_size", 14)
+	save.pressed.connect(_save_hero_profile)
+	hero_overlay.add_child(save)
+	_refresh_hero_creator()
+
+
+func _hero_overlay_button(text_value: String, pos: Vector2, button_size: Vector2, selected: bool) -> Button:
+	var button := Button.new()
+	button.position = pos
+	button.size = button_size
+	button.text = text_value
+	button.focus_mode = Control.FOCUS_NONE
+	button.add_theme_color_override("font_color", Color("#f2e4d1"))
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#38221e") if selected else Color("#19121b")
+	style.border_color = Color("#e6a45d") if selected else Color("#59404a")
+	style.set_border_width_all(2 if selected else 1)
+	style.set_corner_radius_all(8)
+	style.content_margin_left = 8
+	style.content_margin_right = 8
+	style.content_margin_top = 6
+	style.content_margin_bottom = 6
+	button.add_theme_stylebox_override("normal", style)
+	var hover := style.duplicate() as StyleBoxFlat
+	hover.bg_color = Color("#4a2b25")
+	hover.border_color = Color("#ffd080")
+	button.add_theme_stylebox_override("hover", hover)
+	button.add_theme_stylebox_override("pressed", hover)
+	return button
+
+
+func _on_hero_name_changed(value: String) -> void:
+	hero_draft_name = value
+	_refresh_hero_creator()
+
+
+func _select_hero_archetype(index: int) -> void:
+	hero_draft_archetype = clampi(index, 0, HERO_ARCHETYPES.size() - 1)
+	_refresh_hero_creator()
+
+
+func _select_hero_armor(index: int) -> void:
+	hero_draft_armor = clampi(index, 0, HERO_ARMOR_COLORS.size() - 1)
+	_refresh_hero_creator()
+
+
+func _refresh_hero_creator() -> void:
+	if hero_preview_glyph == null or not is_instance_valid(hero_preview_glyph):
+		return
+	hero_preview_glyph.text = HERO_GLYPHS[hero_draft_archetype]
+	hero_preview_glyph.add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_draft_armor]))
+	hero_preview_name.text = hero_draft_name.strip_edges() if not hero_draft_name.strip_edges().is_empty() else "Безымянный кузнец"
+	hero_preview_class.text = HERO_ARCHETYPES[hero_draft_archetype] + "\n" + HERO_ARCHETYPE_DESC[hero_draft_archetype] + "\nДОСПЕХ: " + HERO_ARMOR_NAMES[hero_draft_armor]
+	for i in range(hero_class_buttons.size()):
+		var button: Button = hero_class_buttons[i]
+		var style := StyleBoxFlat.new()
+		var selected := i == hero_draft_archetype
+		style.bg_color = Color("#38221e") if selected else Color("#19121b")
+		style.border_color = Color("#e6a45d") if selected else Color("#59404a")
+		style.set_border_width_all(2 if selected else 1)
+		style.set_corner_radius_all(8)
+		style.content_margin_left = 8
+		style.content_margin_right = 8
+		button.add_theme_stylebox_override("normal", style)
+	for i in range(hero_color_buttons.size()):
+		var button: Button = hero_color_buttons[i]
+		var selected := i == hero_draft_armor
+		var style := StyleBoxFlat.new()
+		style.bg_color = Color("#38221e") if selected else Color("#19121b")
+		style.border_color = Color(HERO_ARMOR_COLORS[i]) if selected else Color("#59404a")
+		style.set_border_width_all(2 if selected else 1)
+		style.set_corner_radius_all(8)
+		button.add_theme_stylebox_override("normal", style)
+
+
+func _save_hero_profile() -> void:
+	if hero_name_input != null and is_instance_valid(hero_name_input):
+		hero_draft_name = hero_name_input.text.strip_edges().left(20)
+	hero_name = hero_draft_name if not hero_draft_name.is_empty() else "Безымянный кузнец"
+	hero_archetype = clampi(hero_draft_archetype, 0, HERO_ARCHETYPES.size() - 1)
+	hero_armor = clampi(hero_draft_armor, 0, HERO_ARMOR_COLORS.size() - 1)
+	_save_game()
+	_close_hero_creator()
+	if playing:
+		_refresh_ui()
+
+
+func _close_hero_creator() -> void:
+	if hero_overlay != null and is_instance_valid(hero_overlay):
+		hero_overlay.queue_free()
+	hero_overlay = null
+	hero_name_input = null
+	hero_preview_glyph = null
+	hero_preview_name = null
+	hero_preview_class = null
+	hero_class_buttons.clear()
+	hero_color_buttons.clear()
+
 func _clear_ui() -> void:
 	for child in get_children():
 		child.queue_free()
@@ -1436,6 +1737,14 @@ func _clear_ui() -> void:
 	victory_summary = null
 	journal_button = null
 	journal_overlay = null
+	story_overlay = null
+	hero_overlay = null
+	hero_name_input = null
+	hero_preview_glyph = null
+	hero_preview_name = null
+	hero_preview_class = null
+	hero_class_buttons.clear()
+	hero_color_buttons.clear()
 
 func _save_game() -> void:
 	var cfg := ConfigFile.new()
@@ -1456,6 +1765,9 @@ func _save_game() -> void:
 	cfg.set_value("progress", "lifetime_energy_earned", lifetime_energy_earned)
 	cfg.set_value("progress", "total_play_seconds", total_play_seconds + maxi(int(Time.get_unix_time_from_system()) - session_started_at, 0))
 	cfg.set_value("progress", "boss_stage_start_clicks", boss_stage_start_clicks)
+	cfg.set_value("hero", "name", hero_name)
+	cfg.set_value("hero", "archetype", hero_archetype)
+	cfg.set_value("hero", "armor", hero_armor)
 	cfg.set_value("progress", "last_time", int(Time.get_unix_time_from_system()))
 	cfg.save(SAVE_PATH)
 
@@ -1480,6 +1792,9 @@ func _load_game() -> void:
 	lifetime_energy_earned = float(cfg.get_value("progress", "lifetime_energy_earned", energy))
 	total_play_seconds = int(cfg.get_value("progress", "total_play_seconds", 0))
 	boss_stage_start_clicks = int(cfg.get_value("progress", "boss_stage_start_clicks", total_clicks))
+	hero_name = str(cfg.get_value("hero", "name", "Безымянный кузнец"))
+	hero_archetype = clampi(int(cfg.get_value("hero", "archetype", 0)), 0, HERO_ARCHETYPES.size() - 1)
+	hero_armor = clampi(int(cfg.get_value("hero", "armor", 0)), 0, HERO_ARMOR_COLORS.size() - 1)
 	var last_time := int(cfg.get_value("progress", "last_time", int(Time.get_unix_time_from_system())))
 	var elapsed := clampf(float(Time.get_unix_time_from_system() - last_time), 0.0, 28800.0)
 	var offline_gain: float = idle_rate * multiplier * elapsed * 0.5
