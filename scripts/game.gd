@@ -267,12 +267,14 @@ func _draw_boss_impact(size: Vector2) -> void:
 	var progress: float = 1.0 - clampf(boss_slash_flash, 0.0, 1.0)
 	var radius: float = 38.0 + progress * 72.0
 	var alpha: float = clampf(boss_slash_flash, 0.0, 1.0)
-	var slash_color := Color("#fff0a3") if boss_slash_critical else Color("#ff9270")
+	var hero_tint := Color(HERO_ARMOR_COLORS[hero_armor])
+	var slash_color := Color("#fff0a3") if boss_slash_critical else hero_tint
 	var slash_width: float = 4.0 if boss_slash_critical else 2.6
-	# A fast curved blade trail gives every tap a readable impact on the boss itself.
+	# The selected hero's armor tint now carries into each strike, without changing damage.
 	draw_arc(center, radius, boss_slash_angle - 0.62, boss_slash_angle + 0.62, 28, Color(slash_color.r, slash_color.g, slash_color.b, alpha * 0.92), slash_width, true)
-	draw_arc(center, radius + 11.0, boss_slash_angle - 0.42, boss_slash_angle + 0.42, 24, Color(1.0, 0.56, 0.31, alpha * 0.62), 1.4, true)
-	for i in range(3 if boss_slash_critical else 2):
+	draw_arc(center, radius + 11.0, boss_slash_angle - 0.42, boss_slash_angle + 0.42, 24, Color(hero_tint.r, hero_tint.g, hero_tint.b, alpha * 0.62), 1.4, true)
+	var trail_rays := 3 if boss_slash_critical else (3 if hero_archetype == 2 else 2)
+	for i in range(trail_rays):
 		var ray_angle: float = boss_slash_angle + (float(i) - 1.0) * 0.34
 		var inner: Vector2 = center + Vector2(cos(ray_angle), sin(ray_angle)) * (radius - 9.0)
 		var outer: Vector2 = center + Vector2(cos(ray_angle), sin(ray_angle)) * (radius + 9.0 + (8.0 if boss_slash_critical else 0.0))
@@ -522,6 +524,7 @@ func _build_game_ui() -> void:
 	story_button.add_theme_font_size_override("font_size", 11)
 	story_button.pressed.connect(_open_story)
 	ui_labels["story_button"] = story_button
+	_build_hero_hud()
 	core_button = _button("", Vector2(505, 215), Vector2(270, 220), false)
 	var core_normal := StyleBoxFlat.new()
 	core_normal.bg_color = Color(0, 0, 0, 0)
@@ -830,6 +833,13 @@ func _story_chapters() -> Array[Dictionary]:
 		{"stage": 10, "title": "ГЛАВА VI — ПАМЯТЬ МИРОВ", "text": "Десятый мир хранит эхо первой войны. Кузнецы пытались расколоть сердце, чтобы ни один бог не смог владеть им. Осколки стали источником силы для всех миров — и проклятием, которое заставляет Стражей возвращаться. Герой начинает понимать: он не завоеватель, а наследник незавершённой работы."},
 		{"stage": 25, "title": "ГЛАВА VII — ПОСЛЕДНИЙ МАСТЕР", "text": "Двадцать пятый мир раскрывает правду: сердце Кузни зовёт не ради освобождения, а ради выбора. Последний мастер должен решить, станет ли он новым богом, навсегда скрепит печати или перекуёт саму основу миров. Ответ ещё не найден. Кузня ждёт следующего удара."}
 	]
+
+
+func _queue_story_chapter_unlock() -> void:
+	for chapter in _story_chapters():
+		if int(chapter["stage"]) == boss_stage and boss_stage > 1:
+			achievement_popup_queue.append("НОВАЯ ГЛАВА ОТКРЫТА  •  " + str(chapter["title"]))
+			return
 
 
 func _current_story_chapter() -> int:
@@ -1146,6 +1156,7 @@ func _strike_core() -> void:
 			boss_history.pop_front()
 		boss_stage_start_clicks = total_clicks
 		boss_stage += 1
+		_queue_story_chapter_unlock()
 		_check_achievements()
 		last_boss_reward = 250.0 * boss_stage
 		energy += last_boss_reward
@@ -1205,9 +1216,36 @@ func _activate_ad_demo() -> void:
 		boost_button.text = "БОНУС x2  60 с"
 	_refresh_ui()
 
+func _build_hero_hud() -> void:
+	_panel(Vector2(305, 164), Vector2(175, 270))
+	var crest := _label(HERO_GLYPHS[hero_archetype], Vector2(310, 182), Vector2(165, 92), 58, Color(HERO_ARMOR_COLORS[hero_armor]))
+	crest.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_labels["hero_crest"] = crest
+	var name_label := _label(hero_name, Vector2(316, 274), Vector2(153, 34), 15, Color("#f2d6ac"))
+	name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_labels["hero_name"] = name_label
+	var class_label := _label(HERO_ARCHETYPES[hero_archetype], Vector2(316, 309), Vector2(153, 42), 10, Color("#c49b80"))
+	class_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	class_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	ui_labels["hero_class"] = class_label
+	var armor_label := _label("ЦВЕТ: " + HERO_ARMOR_NAMES[hero_armor], Vector2(316, 359), Vector2(153, 24), 10, Color(HERO_ARMOR_COLORS[hero_armor]))
+	armor_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ui_labels["hero_armor"] = armor_label
+	var edit_button := _button("ИЗМЕНИТЬ", Vector2(323, 391), Vector2(139, 30), false)
+	edit_button.add_theme_font_size_override("font_size", 10)
+	edit_button.pressed.connect(_open_hero_creator)
+
+
 func _refresh_ui() -> void:
 	if not playing:
 		return
+	if ui_labels.has("hero_crest"):
+		ui_labels["hero_crest"].text = HERO_GLYPHS[hero_archetype]
+		ui_labels["hero_crest"].add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_armor]))
+		ui_labels["hero_name"].text = hero_name
+		ui_labels["hero_class"].text = HERO_ARCHETYPES[hero_archetype]
+		ui_labels["hero_armor"].text = "ЦВЕТ: " + HERO_ARMOR_NAMES[hero_armor]
+		ui_labels["hero_armor"].add_theme_color_override("font_color", Color(HERO_ARMOR_COLORS[hero_armor]))
 	if journal_button != null and is_instance_valid(journal_button):
 		journal_button.text = "ЛЕТОПИСЬ  %d/9" % _unlocked_achievement_count()
 	if story_button != null and is_instance_valid(story_button):
@@ -1289,7 +1327,7 @@ func _refresh_ui() -> void:
 		var accent: ColorRect = ui_labels["upgrade_accent_%d" % i]
 		card.disabled = not can_afford
 		card.modulate = Color.WHITE
-		level_label.text = "УРОВЕНЬ  %02d" % level
+		level_label.text = "РАНГ %s  •  УРОВЕНЬ %02d" % [_upgrade_rank(level), level]
 		cost_label.text = "✦  %s ЭНЕРГИИ" % _format_number(cost)
 		preview_label.text = _upgrade_next_effect(i)
 		var affordability_ratio := clampf(energy / maxf(cost, 1.0), 0.0, 1.0)
@@ -1348,6 +1386,16 @@ func _roman_phase(phase_number: int) -> String:
 		4:
 			return "IV"
 	return "I"
+
+func _upgrade_rank(level: int) -> String:
+	if level >= 25:
+		return "IV"
+	if level >= 10:
+		return "III"
+	if level >= 5:
+		return "II"
+	return "I"
+
 
 func _upgrade_next_effect(index: int) -> String:
 	match index:
