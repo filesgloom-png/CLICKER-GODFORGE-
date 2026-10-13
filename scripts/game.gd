@@ -1443,24 +1443,43 @@ func _open_rpg_character_panel() -> void:
 	rpg_character_overlay.add_child(skills_title)
 	var skill_names := ["РУНОУДАР", "ПЛАМЯ ДУШИ", "РАЗЛОМ"]
 	var skill_glyphs := ["ᚱ", "♨", "✧"]
+	var skill_colors := [Color("#6ec7d8"), Color("#ed875b"), Color("#a58be0")]
+	var skill_types := ["АРКАНА", "ПЛАМЯ", "ПРОСТРАНСТВО"]
 	for i in range(skill_names.size()):
 		var col_x := 530 + i * 138
+		var skill_color: Color = skill_colors[i]
 		var skill_slot := Panel.new()
 		skill_slot.position = Vector2(col_x, 471)
 		skill_slot.size = Vector2(126, 66)
 		var skill_style := StyleBoxFlat.new()
-		skill_style.bg_color = Color("#19121b")
-		skill_style.border_color = Color("#59404a")
+		skill_style.bg_color = Color("#17111b")
+		skill_style.border_color = skill_color.darkened(0.35)
 		skill_style.set_border_width_all(1)
-		skill_style.set_corner_radius_all(7)
+		skill_style.set_corner_radius_all(8)
+		skill_style.shadow_color = Color(skill_color, 0.12)
+		skill_style.shadow_size = 4
 		skill_slot.add_theme_stylebox_override("panel", skill_style)
 		rpg_character_overlay.add_child(skill_slot)
-		var skill_glyph := _character_panel_label(skill_glyphs[i], Vector2(col_x + 4, 474), Vector2(118, 30), 20, Color("#8b6db1"))
+		var skill_icon_back := Panel.new()
+		skill_icon_back.position = Vector2(col_x + 43, 473)
+		skill_icon_back.size = Vector2(40, 29)
+		var skill_icon_style := StyleBoxFlat.new()
+		skill_icon_style.bg_color = Color(skill_color, 0.13)
+		skill_icon_style.border_color = Color(skill_color, 0.65)
+		skill_icon_style.set_border_width_all(1)
+		skill_icon_style.set_corner_radius_all(6)
+		skill_icon_back.add_theme_stylebox_override("panel", skill_icon_style)
+		rpg_character_overlay.add_child(skill_icon_back)
+		var skill_glyph := _character_panel_label(skill_glyphs[i], Vector2(col_x + 4, 472), Vector2(118, 31), 20, skill_color)
 		skill_glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		skill_glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		rpg_character_overlay.add_child(skill_glyph)
-		var skill_name := _character_panel_label(skill_names[i], Vector2(col_x + 3, 507), Vector2(120, 18), 8, Color("#a58b91"))
+		var skill_name := _character_panel_label(skill_names[i], Vector2(col_x + 3, 506), Vector2(120, 13), 8, Color("#f0dfd0"))
 		skill_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rpg_character_overlay.add_child(skill_name)
+		var skill_type := _character_panel_label(skill_types[i] + " • ЗАПЕЧАТАНО", Vector2(col_x + 3, 520), Vector2(120, 12), 7, skill_color)
+		skill_type.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rpg_character_overlay.add_child(skill_type)
 		var skill_button := Button.new()
 		skill_button.position = skill_slot.position
 		skill_button.size = skill_slot.size
@@ -1470,15 +1489,15 @@ func _open_rpg_character_panel() -> void:
 		skill_idle.bg_color = Color(0, 0, 0, 0)
 		skill_idle.border_color = Color(0, 0, 0, 0)
 		skill_idle.set_border_width_all(0)
-		skill_idle.set_corner_radius_all(7)
+		skill_idle.set_corner_radius_all(8)
 		var skill_hover := skill_idle.duplicate() as StyleBoxFlat
-		skill_hover.bg_color = Color(0.55, 0.35, 0.85, 0.09)
-		skill_hover.border_color = Color("#8b6db1")
+		skill_hover.bg_color = Color(skill_color, 0.09)
+		skill_hover.border_color = skill_color
 		skill_hover.set_border_width_all(1)
 		skill_button.add_theme_stylebox_override("normal", skill_idle)
 		skill_button.add_theme_stylebox_override("hover", skill_hover)
 		skill_button.add_theme_stylebox_override("pressed", skill_hover)
-		skill_button.pressed.connect(_open_rpg_detail_card.bind(skill_names[i], "БОЕВОЙ НАВЫК", skill_glyphs[i], Color("#a58be0"), "Описание навыка «%s».\n\nАктивная способность пока не подключена к бою. Нажатие открывает только эту карточку и не расходует ресурсы." % skill_names[i]))
+		skill_button.pressed.connect(_open_rpg_detail_card.bind(skill_names[i], "БОЕВОЙ НАВЫК • " + skill_types[i], skill_glyphs[i], skill_color, "Описание навыка «%s».\n\nСтихия: %s. Способность показана как визуальный прототип и пока не подключена к бою. Карточка не расходует ресурсы и не меняет характеристики героя." % [skill_names[i], skill_types[i].to_lower()]))
 		rpg_character_overlay.add_child(skill_button)
 
 	var note := _character_panel_label("ВИЗУАЛЬНЫЙ ПРОТОТИП  •  СНАРЯЖЕНИЕ И НАВЫКИ ПОКА НЕ ВЛИЯЮТ НА БОЙ", Vector2(530, 565), Vector2(410, 26), 9, Color("#8d777d"))
@@ -1488,6 +1507,9 @@ func _open_rpg_character_panel() -> void:
 func _open_rpg_detail_card(title_value: String, category_value: String, glyph_value: String, accent: Color, description_value: String) -> void:
 	if rpg_character_overlay == null or not is_instance_valid(rpg_character_overlay):
 		return
+	for child in rpg_character_overlay.get_children():
+		if child is Panel and child.name == "RPGDetailCard":
+			child.queue_free()
 	var detail := Panel.new()
 	detail.name = "RPGDetailCard"
 	detail.position = Vector2(350, 220)
