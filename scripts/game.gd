@@ -16,6 +16,9 @@ var critical_flash := 0.0
 var boss_transition_flash := 0.0
 var boss_hit_flash := 0.0
 var boss_shake := 0.0
+var boss_slash_flash := 0.0
+var boss_slash_angle := 0.0
+var boss_slash_critical := false
 var combo_count := 0
 var combo_time := 0.0
 var combat_popups: Array[Dictionary] = []
@@ -84,6 +87,7 @@ func _process(delta: float) -> void:
 		achievement_popup_time = 3.0
 	boss_hit_flash = maxf(0.0, boss_hit_flash - delta * 3.2)
 	boss_shake = move_toward(boss_shake, 0.0, delta * 4.8)
+	boss_slash_flash = maxf(0.0, boss_slash_flash - delta * (2.6 if boss_slash_critical else 3.8))
 	if combo_time > 0.0:
 		combo_time = maxf(0.0, combo_time - delta)
 		if combo_time <= 0.0:
@@ -195,6 +199,7 @@ func _draw() -> void:
 		draw_circle(p, 2.0 + hit_flash, Color(1.0, 0.58, 0.24, 0.8))
 	# Keep the realm boss in the open channel between the core and the right HUD; placing it under the opaque panel hid it completely.
 	_draw_boss_portrait(Vector2(size.x * 0.674, size.y * 0.445), boss_stage)
+	_draw_boss_impact(size)
 	for popup in combat_popups:
 		var popup_life: float = clampf(float(popup["life"]), 0.0, 1.0)
 		var popup_position: Vector2 = popup["position"]
@@ -234,6 +239,25 @@ func _draw() -> void:
 	for i in range(6):
 		var inset := float(i) * 7.0
 		draw_rect(Rect2(inset, inset, size.x - inset * 2.0, size.y - inset * 2.0), Color(0.22, 0.08, 0.1, 0.045), false, 1.0)
+
+func _draw_boss_impact(size: Vector2) -> void:
+	if boss_slash_flash <= 0.0:
+		return
+	var center := Vector2(size.x * 0.674, size.y * 0.445 + sin(pulse * 1.35 + float(boss_stage)) * 4.0)
+	var progress: float = 1.0 - clampf(boss_slash_flash, 0.0, 1.0)
+	var radius: float = 38.0 + progress * 72.0
+	var alpha: float = clampf(boss_slash_flash, 0.0, 1.0)
+	var slash_color := Color("#fff0a3") if boss_slash_critical else Color("#ff9270")
+	var slash_width: float = 4.0 if boss_slash_critical else 2.6
+	# A fast curved blade trail gives every tap a readable impact on the boss itself.
+	draw_arc(center, radius, boss_slash_angle - 0.62, boss_slash_angle + 0.62, 28, Color(slash_color.r, slash_color.g, slash_color.b, alpha * 0.92), slash_width, true)
+	draw_arc(center, radius + 11.0, boss_slash_angle - 0.42, boss_slash_angle + 0.42, 24, Color(1.0, 0.56, 0.31, alpha * 0.62), 1.4, true)
+	for i in range(3 if boss_slash_critical else 2):
+		var ray_angle: float = boss_slash_angle + (float(i) - 1.0) * 0.34
+		var inner: Vector2 = center + Vector2(cos(ray_angle), sin(ray_angle)) * (radius - 9.0)
+		var outer: Vector2 = center + Vector2(cos(ray_angle), sin(ray_angle)) * (radius + 9.0 + (8.0 if boss_slash_critical else 0.0))
+		draw_line(inner, outer, Color(1.0, 0.78, 0.43, alpha * 0.82), 2.0 if boss_slash_critical else 1.2, true)
+
 
 func _draw_sanctum_architecture(size: Vector2) -> void:
 	# Tall broken pillars and narrow stained-glass windows frame the forge without covering the HUD.
@@ -921,6 +945,9 @@ func _strike_core() -> void:
 		boss_transition_flash = maxf(boss_transition_flash, 0.28)
 	boss_hit_flash = 1.0
 	boss_shake = 1.0
+	boss_slash_flash = 1.0
+	boss_slash_angle = rng.randf_range(-PI, PI)
+	boss_slash_critical = critical
 	combat_popups.append({"text": ("КРИТ!  −" if critical else "−") + _format_number(boss_hit_damage), "position": Vector2(862.0 + rng.randf_range(-24.0, 24.0), 286.0), "life": 1.0, "size": 23 if critical else 18, "color": Color("#ffe28b") if critical else Color("#ff8c72")})
 	combat_popups.append({"text": "+" + _format_number(damage) + " ЭНЕРГИИ", "position": Vector2(640.0 + rng.randf_range(-20.0, 20.0), 284.0), "life": 0.82, "size": 15, "color": Color("#ffc879")})
 	if combo_count in [10, 25, 50, 100, 250, 500, 1000]:
@@ -962,6 +989,7 @@ func _strike_core() -> void:
 		critical_flash = 0.0
 		boss_hit_flash = 0.0
 		boss_shake = 0.0
+		boss_slash_flash = 0.0
 		combat_popups.append({"text": "СТРАЖ СОКРУШЁН", "position": Vector2(862.0, 230.0), "life": 1.35, "size": 20, "color": Color("#ffe6a0")})
 		combat_popups.append({"text": "+%s ЭНЕРГИИ" % _format_number(last_boss_reward), "position": Vector2(640.0, 200.0), "life": 1.7, "size": 17, "color": Color("#f5c16e")})
 		if ui_labels.has("boss_hint"):
