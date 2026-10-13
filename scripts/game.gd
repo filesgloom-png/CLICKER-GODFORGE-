@@ -526,6 +526,22 @@ func _build_game_ui() -> void:
 	story_button.add_theme_font_size_override("font_size", 11)
 	story_button.pressed.connect(_open_story)
 	ui_labels["story_button"] = story_button
+	var story_progress_label := _label("", Vector2(490, 140), Vector2(405, 16), 9, Color("#c49b80"))
+	story_progress_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui_labels["story_progress_label"] = story_progress_label
+	var story_progress_track := ColorRect.new()
+	story_progress_track.position = Vector2(490, 158)
+	story_progress_track.size = Vector2(405, 4)
+	story_progress_track.color = Color("#39232d")
+	story_progress_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(story_progress_track)
+	var story_progress_fill := ColorRect.new()
+	story_progress_fill.position = story_progress_track.position
+	story_progress_fill.size = Vector2(0, 4)
+	story_progress_fill.color = Color("#e6a45d")
+	story_progress_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(story_progress_fill)
+	ui_labels["story_progress_fill"] = story_progress_fill
 	_build_hero_hud()
 	core_button = _button("", Vector2(505, 215), Vector2(270, 220), false)
 	var core_normal := StyleBoxFlat.new()
@@ -640,6 +656,7 @@ func _build_upgrade_card(index: int, pos: Vector2) -> void:
 	medallion_style.set_corner_radius_all(8)
 	medallion.add_theme_stylebox_override("panel", medallion_style)
 	add_child(medallion)
+	ui_labels["upgrade_medallion_style_%d" % index] = medallion_style
 
 	var glyph := _label(UPGRADE_GLYPHS[index], pos + Vector2(14, 12), Vector2(48, 50), 27, Color("#f1b96f"))
 	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -655,11 +672,11 @@ func _build_upgrade_card(index: int, pos: Vector2) -> void:
 	desc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_desc_%d" % index] = desc
 
-	var level_label := _label("УРОВЕНЬ  00", pos + Vector2(16, 101), Vector2(92, 18), 11, Color("#e5c8a2"))
+	var level_label := _label("РАНГ I  •  УР. 00", pos + Vector2(16, 101), Vector2(132, 18), 10, Color("#e5c8a2"))
 	level_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_level_%d" % index] = level_label
 
-	var state_label := _label("ГОТОВО К КОВКЕ", pos + Vector2(104, 101), Vector2(172, 18), 9, Color("#f2bb70"))
+	var state_label := _label("ГОТОВО К КОВКЕ", pos + Vector2(148, 101), Vector2(126, 18), 9, Color("#f2bb70"))
 	state_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	state_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui_labels["upgrade_state_%d" % index] = state_label
@@ -838,10 +855,14 @@ func _story_chapters() -> Array[Dictionary]:
 
 
 func _queue_story_chapter_unlock() -> void:
+	var chapter_unlocked := false
 	for chapter in _story_chapters():
 		if int(chapter["stage"]) == boss_stage and boss_stage > 1:
 			achievement_popup_queue.append("НОВАЯ ГЛАВА ОТКРЫТА  •  " + str(chapter["title"]))
-			return
+			chapter_unlocked = true
+			break
+	if boss_stage in [5, 10, 25, 50, 100] and not chapter_unlocked:
+		achievement_popup_queue.append("РУБЕЖ ДОСТИГНУТ  •  МИР %02d" % boss_stage)
 
 
 func _current_story_chapter() -> int:
@@ -1264,7 +1285,25 @@ func _refresh_ui() -> void:
 		journal_button.text = "ЛЕТОПИСЬ  %d/9" % _unlocked_achievement_count()
 	if story_button != null and is_instance_valid(story_button):
 		var chapters := _story_chapters()
-		story_button.text = "ХРОНИКИ  •  ГЛАВА %d/%d" % [_current_story_chapter() + 1, chapters.size()]
+		var current_chapter_index := _current_story_chapter()
+		story_button.text = "ХРОНИКИ  •  ГЛАВА %d/%d" % [current_chapter_index + 1, chapters.size()]
+		if ui_labels.has("story_progress_label") and ui_labels.has("story_progress_fill"):
+			var story_start := int(chapters[current_chapter_index]["stage"])
+			var story_target := 0
+			var story_caption := ""
+			if current_chapter_index + 1 < chapters.size():
+				story_target = int(chapters[current_chapter_index + 1]["stage"])
+				story_caption = "СЛЕДУЮЩАЯ ГЛАВА: МИР %02d" % story_target
+			else:
+				story_start = 25
+				story_target = maxi(50, (boss_stage / 25 + 1) * 25)
+				story_caption = "ВСЕ ГЛАВЫ ОТКРЫТЫ  •  СЛЕДУЮЩИЙ РУБЕЖ: МИР %02d" % story_target
+			var story_ratio := clampf(float(boss_stage - story_start) / maxf(float(story_target - story_start), 1.0), 0.0, 1.0)
+			var story_label: Label = ui_labels["story_progress_label"]
+			story_label.text = story_caption
+			story_label.add_theme_color_override("font_color", Color("#f2c27b") if story_ratio >= 0.8 else Color("#c49b80"))
+			var story_fill: ColorRect = ui_labels["story_progress_fill"]
+			story_fill.size.x = 405.0 * story_ratio
 	if ui_labels.has("hero_button"):
 		var hero_button: Button = ui_labels["hero_button"]
 		hero_button.text = "ГЕРОЙ  •  " + hero_name.left(8)
@@ -1341,7 +1380,14 @@ func _refresh_ui() -> void:
 		var accent: ColorRect = ui_labels["upgrade_accent_%d" % i]
 		card.disabled = not can_afford
 		card.modulate = Color.WHITE
-		level_label.text = "РАНГ %s  •  УРОВЕНЬ %02d" % [_upgrade_rank(level), level]
+		level_label.text = "РАНГ %s  •  УР. %02d" % [_upgrade_rank(level), level]
+		var rank_color := _upgrade_rank_color(level)
+		level_label.add_theme_color_override("font_color", rank_color)
+		var upgrade_icon: Label = ui_labels["upgrade_icon_%d" % i]
+		upgrade_icon.add_theme_color_override("font_color", rank_color)
+		var medallion_style: StyleBoxFlat = ui_labels["upgrade_medallion_style_%d" % i]
+		medallion_style.border_color = rank_color if level > 0 else (Color("#e6a45d") if can_afford else Color("#59404a"))
+		medallion_style.bg_color = Color("#26151b") if level > 0 else Color("#120c13")
 		cost_label.text = "✦  %s ЭНЕРГИИ" % _format_number(cost)
 		preview_label.text = _upgrade_next_effect(i)
 		var affordability_ratio := clampf(energy / maxf(cost, 1.0), 0.0, 1.0)
@@ -1409,6 +1455,18 @@ func _upgrade_rank(level: int) -> String:
 	if level >= 5:
 		return "II"
 	return "I"
+
+
+func _upgrade_rank_color(level: int) -> Color:
+	if level >= 25:
+		return Color("#ff795f")
+	if level >= 10:
+		return Color("#c69bff")
+	if level >= 5:
+		return Color("#70d7c2")
+	if level > 0:
+		return Color("#e6a45d")
+	return Color("#a98b84")
 
 
 func _upgrade_next_effect(index: int) -> String:
