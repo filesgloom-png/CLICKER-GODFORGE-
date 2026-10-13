@@ -519,6 +519,7 @@ func _build_game_ui() -> void:
 	ui_labels["boss_threat"] = _label("УГРОЗА: НИЗКАЯ", Vector2(968, 273), Vector2(255, 18), 10, Color("#d5a77a"))
 	ui_labels["boss_threat"].horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	ui_labels["boss_hint"] = _label("Сокруши титана, чтобы получить\nосколок бога.", Vector2(968, 296), Vector2(255, 43), 12, Color("#aa8b87"))
+	ui_labels["boss_reward"] = _label("НАГРАДА: +500 ЭНЕРГИИ", Vector2(968, 341), Vector2(255, 18), 10, Color("#f2c27b"))
 	boost_button = _button("БОНУС x2  (ДЕМО)", Vector2(968, 365), Vector2(255, 52), true)
 	boost_button.add_theme_font_size_override("font_size", 13)
 	boost_button.pressed.connect(_activate_ad_demo)
@@ -877,11 +878,22 @@ func _strike_core() -> void:
 	lifetime_energy_earned += damage
 	energy_flash = 1.0
 	var boss_hit_damage := damage * boss_damage
+	var previous_hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
 	boss_hp -= boss_hit_damage
+	var current_hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
+	var previous_phase: int = 1 if previous_hp_ratio > 0.75 else (2 if previous_hp_ratio > 0.5 else (3 if previous_hp_ratio > 0.25 else 4))
+	var current_phase: int = 1 if current_hp_ratio > 0.75 else (2 if current_hp_ratio > 0.5 else (3 if current_hp_ratio > 0.25 else 4))
+	if current_phase > previous_phase and boss_hp > 0.0:
+		combat_popups.append({"text": "ФАЗА %s  •  СТРАЖ ОСЛАБЛЕН" % _roman_phase(current_phase), "position": Vector2(862.0, 254.0), "life": 1.2, "size": 15, "color": Color("#ffbd76")})
+		boss_transition_flash = maxf(boss_transition_flash, 0.28)
 	boss_hit_flash = 1.0
 	boss_shake = 1.0
 	combat_popups.append({"text": ("КРИТ!  −" if critical else "−") + _format_number(boss_hit_damage), "position": Vector2(862.0 + rng.randf_range(-24.0, 24.0), 286.0), "life": 1.0, "size": 23 if critical else 18, "color": Color("#ffe28b") if critical else Color("#ff8c72")})
 	combat_popups.append({"text": "+" + _format_number(damage) + " ЭНЕРГИИ", "position": Vector2(640.0 + rng.randf_range(-20.0, 20.0), 284.0), "life": 0.82, "size": 15, "color": Color("#ffc879")})
+	if combo_count in [10, 25, 50, 100]:
+		var combo_title := "СЕРИЯ  %d УДАРОВ!" % combo_count
+		combat_popups.append({"text": combo_title, "position": Vector2(640.0, 250.0), "life": 1.25, "size": 20, "color": Color("#ffe6a0")})
+		critical_flash = maxf(critical_flash, 0.35)
 	if ui_labels.has("hit"):
 		ui_labels["hit"].text = ("КРИТИЧЕСКИЙ УДАР!  +" if critical else "УДАР ПО ЯДРУ  +") + _format_number(damage)
 		ui_labels["hit"].add_theme_color_override("font_color", Color("#fff0a3") if critical else Color("#d58b4c"))
@@ -960,10 +972,19 @@ func _refresh_ui() -> void:
 		ui_labels["energy"].add_theme_color_override("font_color", Color("#fff0a3").lerp(Color("#f5c16e"), 1.0 - energy_flash))
 		ui_labels["lifetime"].text = "ВСЕГО ПОЛУЧЕНО  " + _format_number(lifetime_energy_earned)
 		ui_labels["clicks"].text = "УДАРОВ ПО ЯДРУ  " + _format_number(total_clicks)
-		var milestone_target := 10 if boss_stage < 10 else 25
-		var milestone_start := 0 if milestone_target == 10 else 10
-		var milestone_ratio := clampf(float(boss_stage - milestone_start) / float(milestone_target - milestone_start), 0.0, 1.0)
-		ui_labels["milestone"].text = "ПУТЬ К МИРУ %02d  •  %d%%" % [milestone_target, int(round(milestone_ratio * 100.0))]
+		var milestone_targets: Array[int] = [5, 10, 25, 50, 100]
+		var milestone_target: int = 125
+		var milestone_start: int = 100
+		for target in milestone_targets:
+			if boss_stage < target:
+				milestone_target = target
+				break
+			milestone_start = target
+		if boss_stage >= 100:
+			milestone_start = boss_stage - posmod(boss_stage, 25)
+			milestone_target = milestone_start + 25
+		var milestone_ratio: float = clampf(float(boss_stage - milestone_start) / maxf(float(milestone_target - milestone_start), 1.0), 0.0, 1.0)
+		ui_labels["milestone"].text = "РУБЕЖ МИРА %02d  •  %d%%" % [milestone_target, int(round(milestone_ratio * 100.0))]
 		var milestone_fill: ColorRect = ui_labels["milestone_fill"]
 		milestone_fill.size = Vector2(210.0 * milestone_ratio, 5.0)
 		ui_labels["rate"].text = _format_number(idle_rate * multiplier * (2.0 if ad_boost_time > 0.0 else 1.0)) + " / СЕК"
@@ -973,6 +994,7 @@ func _refresh_ui() -> void:
 		ui_labels["crit"].text = "ШАНС КРИТА\n8%  •  УРОН x5"
 		ui_labels["dps"].text = "ДОХОД В ПРОСТОЕ\n" + _format_number(idle_rate * multiplier) + " / сек"
 		ui_labels["boss"].text = _boss_name(boss_stage) + "  •  %02d" % boss_stage
+		ui_labels["boss_reward"].text = "НАГРАДА: +%s ЭНЕРГИИ" % _format_number(250.0 * float(boss_stage + 1))
 		ui_labels["boss_hp"].text = _format_number(maxf(0.0, boss_hp)) + " / " + _format_number(boss_max_hp) + " ОЗ"
 		var hp_ratio: float = clampf(boss_hp / maxf(boss_max_hp, 1.0), 0.0, 1.0)
 		var phase_label: Label = ui_labels["boss_phase"]
