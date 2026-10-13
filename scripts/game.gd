@@ -1354,41 +1354,21 @@ func _open_rpg_character_panel() -> void:
 	edit_appearance.pressed.connect(_edit_appearance_from_character_panel)
 	rpg_character_overlay.add_child(edit_appearance)
 
-	var level_label := _character_panel_label("УРОВЕНЬ  01", Vector2(530, 139), Vector2(210, 32), 20, Color("#f2c27b"))
-	rpg_character_overlay.add_child(level_label)
-	var rank_label := _character_panel_label("НОВИЧОК КУЗНИ", Vector2(740, 145), Vector2(205, 22), 11, Color("#c49b80"))
-	rank_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	rpg_character_overlay.add_child(rank_label)
-
-	var xp_label := _character_panel_label("ОПЫТ  0 / 100", Vector2(530, 181), Vector2(390, 20), 11, Color("#d8b68c"))
-	rpg_character_overlay.add_child(xp_label)
-	var xp_track := ColorRect.new()
-	xp_track.position = Vector2(530, 205)
-	xp_track.size = Vector2(410, 8)
-	xp_track.color = Color("#39232d")
-	xp_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rpg_character_overlay.add_child(xp_track)
-	var xp_fill := ColorRect.new()
-	xp_fill.position = xp_track.position
-	xp_fill.size = Vector2(0, 8)
-	xp_fill.color = Color("#e6a45d")
-	xp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rpg_character_overlay.add_child(xp_fill)
-
-	var hp_label := _character_panel_label("ЗДОРОВЬЕ  100 / 100", Vector2(530, 226), Vector2(390, 20), 11, Color("#dba29a"))
-	rpg_character_overlay.add_child(hp_label)
-	var hp_track := ColorRect.new()
-	hp_track.position = Vector2(530, 250)
-	hp_track.size = Vector2(410, 8)
-	hp_track.color = Color("#39232d")
-	hp_track.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rpg_character_overlay.add_child(hp_track)
-	var hp_fill := ColorRect.new()
-	hp_fill.position = hp_track.position
-	hp_fill.size = Vector2(410, 8)
-	hp_fill.color = Color("#a94345")
-	hp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	rpg_character_overlay.add_child(hp_fill)
+	var progress_title := _character_panel_label("ПРОГРЕСС МИРА", Vector2(530, 139), Vector2(230, 28), 17, Color("#f2c27b"))
+	rpg_character_overlay.add_child(progress_title)
+	var world_label := _character_panel_label("МИР %02d" % boss_stage, Vector2(530, 176), Vector2(190, 22), 12, Color("#f2d6ac"))
+	rpg_character_overlay.add_child(world_label)
+	var victories_label := _character_panel_label("ПОБЕДЫ: %s" % _format_number(float(boss_victories)), Vector2(730, 176), Vector2(210, 22), 11, Color("#c49b80"))
+	victories_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	rpg_character_overlay.add_child(victories_label)
+	var shards_label := _character_panel_label("ОСКОЛКИ БОГА  %d" % maxi(boss_stage - 1, 0), Vector2(530, 201), Vector2(410, 18), 10, Color("#a99ce2"))
+	rpg_character_overlay.add_child(shards_label)
+	var stat_power := _character_panel_label("СИЛА УДАРА  %s" % _format_number(click_power * multiplier), Vector2(530, 228), Vector2(198, 22), 10, Color("#e6a45d"))
+	rpg_character_overlay.add_child(stat_power)
+	var stat_idle := _character_panel_label("ПРОИЗВОДСТВО  %s/с" % _format_number(idle_rate * multiplier), Vector2(735, 228), Vector2(205, 22), 10, Color("#d8b68c"))
+	rpg_character_overlay.add_child(stat_idle)
+	var stat_energy := _character_panel_label("ЗАПАС ЭНЕРГИИ  %s" % _format_number(energy), Vector2(530, 252), Vector2(410, 18), 10, Color("#f2c27b"))
+	rpg_character_overlay.add_child(stat_energy)
 
 	var equipment_title := _character_panel_label("ЭКИПИРОВКА", Vector2(530, 279), Vector2(400, 24), 14, Color("#f2d6ac"))
 	rpg_character_overlay.add_child(equipment_title)
