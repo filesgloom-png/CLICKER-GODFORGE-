@@ -1100,10 +1100,10 @@ func _refresh_ui() -> void:
 			state_label.text = "МОЖНО УЛУЧШИТЬ"
 			state_label.add_theme_color_override("font_color", Color("#e5b56f"))
 		elif level > 0:
-			state_label.text = "УЛУЧШЕНО • НУЖНА ЭНЕРГИЯ"
-			state_label.add_theme_color_override("font_color", Color("#a88a83"))
+			state_label.text = "НЕ ХВАТАЕТ  %s" % _format_number(maxf(cost - energy, 0.0))
+			state_label.add_theme_color_override("font_color", Color("#c08b83"))
 		else:
-			state_label.text = "НУЖНА ЭНЕРГИЯ"
+			state_label.text = "НУЖНО ЕЩЁ  %s" % _format_number(maxf(cost - energy, 0.0))
 			state_label.add_theme_color_override("font_color", Color("#907b82"))
 		accent.color = Color("#e6a45d") if can_afford else Color("#513541")
 		var normal := StyleBoxFlat.new()
@@ -1147,13 +1147,15 @@ func _roman_phase(phase_number: int) -> String:
 func _upgrade_next_effect(index: int) -> String:
 	match index:
 		0:
-			return "СЛЕДУЮЩИЙ УРОВЕНЬ: СИЛА ×1,55"
+			return "СИЛА: %s → %s" % [_format_number(click_power * multiplier), _format_number(click_power * 1.55 * multiplier)]
 		1:
-			return "СЛЕДУЮЩИЙ УРОВЕНЬ: +%s / сек" % _format_number(pow(1.32, upgrade_levels[index]))
+			var current_idle := idle_rate * multiplier
+			var next_idle := (idle_rate + pow(1.32, upgrade_levels[index])) * multiplier
+			return "ДОХОД: %s → %s / сек" % [_format_number(current_idle), _format_number(next_idle)]
 		2:
-			return "СЛЕДУЮЩИЙ УРОВЕНЬ: ВСЁ ×1,18"
+			return "ВСЁ ПРОИЗВОДСТВО: ×%.2f → ×%.2f" % [multiplier, multiplier * 1.18]
 		3:
-			return "СЛЕДУЮЩИЙ УРОВЕНЬ: УРОН ×1,45"
+			return "УРОН БОССУ: ×%.2f → ×%.2f" % [boss_damage, boss_damage * 1.45]
 	return ""
 
 func _format_number(value: float) -> String:
